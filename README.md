@@ -37,12 +37,13 @@ docker compose -f deploy/docker-compose.yml up
 ## Architecture
 ```mermaid
 flowchart LR
-  IMU[IMU/EMG/Camera] --> ENC[Spike/Window Encoder]
-  ENC --> HYB[Hybrid TCN–SNN Inference]
-  HYB --> CTRL[Controller (PID/Policy)]
+  IMU[IMU / EMG / Camera] --> ENC[Spike / Window Encoder]
+  ENC --> HYB[Hybrid TCN-SNN Inference]
+  HYB --> CTRL[Controller : PID / Policy]
   CTRL --> ACT[Robot Actuators]
   HYB --> MET[Metrics: latency, spikes, energy]
-  MET --> API[FastAPI Dashboard]
+  MET --> API_NODE[FastAPI Dashboard]
+  
 ```
 
 ## Roadmap (6 months)

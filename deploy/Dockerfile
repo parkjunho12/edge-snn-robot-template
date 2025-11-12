@@ -1,5 +1,5 @@
 # 베이스: ROS 2 Humble (Ubuntu 22.04)
-FROM osrf/ros:humble
+FROM osrf/ros:humble-desktop
 
 # 시스템 패키지 & rclpy 설치 (apt)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -7,6 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
       ros-humble-rclpy \
     && rm -rf /var/lib/apt/lists/*
+
+# 2. python3 명령을 python으로 연결 (GitHub Actions용 편의)
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
+# 3. CI용 툴 포함 (테스트 도구)
+RUN pip3 install -U pip flake8 pytest
 
 # 파이썬 업그레이드 & 워킹 디렉토리
 ENV PYTHONUNBUFFERED=1
