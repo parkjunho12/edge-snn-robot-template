@@ -8,6 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-humble-rclpy \
     && rm -rf /var/lib/apt/lists/*
 
+# 가상환경 생성 및 PATH 설정
+RUN python3 -m venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # 2. python3 명령을 python으로 연결 (GitHub Actions용 편의)
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
@@ -18,9 +23,9 @@ RUN pip3 install -U pip flake8 pytest
 ENV PYTHONUNBUFFERED=1
 WORKDIR /lab
 
-# 의존성 복사 및 설치 (rclpy는 requirements.txt에서 제외!)
+# (컨텍스트를 리포 루트로 빌드한다고 가정) 의존성 설치
 COPY requirements.txt /lab/requirements.txt
-RUN python3 -m pip install --upgrade pip && \
+RUN python -m pip install --upgrade pip && \
     pip install --no-cache-dir -r /lab/requirements.txt
 
 # 앱 소스 복사
@@ -34,5 +39,6 @@ RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /lab
 USER appuser
 
 # 엔트리포인트
-COPY deploy/entrypoint.sh /lab/entrypoint.sh
-ENTRYPOINT ["/bin/bash", "/lab/entrypoint.sh"]
+COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
+RUN chmod +x /lab/entrypoint.sh
+ENTRYPOINT ["/bin/bash", "/lab/deploy/entrypoint.sh"]
