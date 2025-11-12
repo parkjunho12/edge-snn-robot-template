@@ -16,7 +16,7 @@ build/
 pip-wheel-metadata/
 *.manifest
 *.spec
-
+.pip-cache/
 # --- Virtual environments ---
 .venv/
 .env/
