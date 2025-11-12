@@ -21,7 +21,7 @@ class HybridTCNSNN(nn.Module):
     def __init__(self, c_in=8, hidden=32, classes=3, seq=64):
         super().__init__()
         self.tcn1 = TCNBlock(c_in, hidden, k=3, d=1)
-        self.tsn = snn.Leaky(beta=0.9, surrogate_function=surrogate.fast_sigmoid())
+        self.tsn = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
         self.readout = nn.Linear(hidden*seq, classes)
         self.seq = seq
     def forward(self, x, num_steps=1):
