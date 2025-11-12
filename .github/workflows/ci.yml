@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [develop, main]        # PR에서는 CI만
   push:
-    branches: [main]                 # main에 머지되면 릴리스
+    branches: [develop, main]                 # main에 머지되면 릴리스
 
 concurrency:
   group: ci-${{ github.ref }}
