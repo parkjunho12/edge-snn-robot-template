@@ -1,0 +1,17 @@
+
+torch
+torchaudio
+numpy
+pandas
+scipy
+snnTorch
+onnx
+onnxruntime
+fastapi
+uvicorn
+pydantic
+psutil
+rclpy
+opencv-python
+pytest
+flake8

@@ -1,0 +1,9 @@
+site_name: Edge SNN Robot
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - BOM (Budget): bom_budget.md
+  - BOM (Pro): bom_pro.md
+  - Safety: safety.md
+  - Metrics: metrics.md

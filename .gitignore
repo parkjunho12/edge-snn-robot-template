@@ -1,0 +1,160 @@
+# ============================================================
+#  edge-snn-robot-template: Python + ROS2 + Docker + Docs
+# ============================================================
+
+# --- Python build & cache ---
+__pycache__/
+*.py[cod]
+*.so
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+*.manifest
+*.spec
+
+# --- Virtual environments ---
+.venv/
+.env/
+venv/
+ENV/
+env.bak/
+python_env/
+
+# --- Logs & temporary ---
+*.log
+*.out
+*.tmp
+*.swp
+*.bak
+nohup.out
+
+# --- Jupyter notebooks ---
+.ipynb_checkpoints/
+*.ipynb~
+notebooks/.ipynb_checkpoints/
+
+# --- ROS2 build artifacts ---
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+ros2_ws/**/*.pyc
+ros2_ws/**/*.pyo
+
+# --- Firmware / Board binaries ---
+firmware/**/*.bin
+firmware/**/*.elf
+firmware/**/*.hex
+firmware/build/
+firmware/.pio/
+firmware/.vscode/
+
+# --- Docker / Deployment ---
+deploy/.env
+deploy/tmp/
+*.pid
+*.sock
+*.tar
+*.img
+*.qcow2
+
+# --- Data & models (to ignore trained weights) ---
+data/
+datasets/
+checkpoints/
+outputs/
+runs/
+*.onnx
+*.pt
+*.pth
+*.h5
+*.ckpt
+
+# --- MkDocs / Documentation build ---
+site/
+docs/_build/
+docs/.cache/
+*.pdf
+*.aux
+*.log
+*.toc
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# --- macOS / Windows system files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- GitHub Actions / CI ---
+.github/workflows/*.tmp
+.github/workflows/__pycache__/
+
+# --- Jetson / Edge device generated files ---
+*.nvpmodel
+*.jetson_stats
+*.dmesg
+*.swap
+*.nvvp
+
+# --- Test artifacts ---
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+
+# --- Optional: model export / eval results ---
+eval/results/
+eval/cache/
+eval/*.csv
+eval/*.json
+
+# --- Local config files ---
+local_config.yaml
+settings.json
+secret_*.json
+api_keys.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+.env
+dist/
+build/
+.eggs/
+
+# ROS2 / Colcon
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Docker
+*.log
+deploy/.env
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Cache
+*.cache/

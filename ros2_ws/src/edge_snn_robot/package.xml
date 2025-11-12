@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>edge_snn_robot</name>
+  <version>0.0.1</version>
+  <description>ROS2 nodes for Edge SNN Robot</description>
+  <maintainer email="you@example.com">You</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+</package>
