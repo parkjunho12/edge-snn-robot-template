@@ -13,7 +13,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}   # ghcr.io/<owner>/<repo>
-  DOCKER_CONTEXT: ./deploy               # Dockerfile 위치
+  BUILD_CONTEXT: ./deploy               # Dockerfile 위치
   PY: '3.10'
 
 jobs:
@@ -51,14 +51,6 @@ jobs:
 
       - name: Tests
         run: pytest -q
-
-      - name: Docker build (no push)
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ env.DOCKER_CONTEXT }}
-          push: false
-          platforms: linux/amd64
-          tags: temp-ci-check:latest
 
   # --- Release: main push 시 버전업 + 빌드/푸시 ---
   release:
@@ -159,7 +151,7 @@ jobs:
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ env.DOCKER_CONTEXT }}
+          context: ${{ env.BUILD_CONTEXT }}
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
