@@ -1,0 +1,12 @@
+.git
+.github
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.sqlite
+.env
+*.ipynb_checkpoints
+node_modules
+/build
+/dist
