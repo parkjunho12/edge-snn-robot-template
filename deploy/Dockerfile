@@ -34,11 +34,12 @@ COPY src /lab/src
 # 기본 포트
 EXPOSE 8000
 
-# 비루트 유저(옵션, 보안 권장)
+# 엔트리포인트 복사 및 권한 부여
+COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
+RUN chmod +x /lab/deploy/entrypoint.sh
+
+# 비루트 유저 생성 및 폴더 소유권 변경
 RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /lab
 USER appuser
 
-# 엔트리포인트
-COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
-RUN chmod +x /lab/entrypoint.sh
 ENTRYPOINT ["/bin/bash", "/lab/deploy/entrypoint.sh"]
