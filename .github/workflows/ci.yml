@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: docker.io/ghdlwnsgh12/edge-snn-robot-template:latest
+      options: --user 0:0 
     permissions:
       contents: read
     steps:
