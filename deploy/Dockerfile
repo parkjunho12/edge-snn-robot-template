@@ -40,5 +40,5 @@ USER appuser
 
 # 엔트리포인트
 COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
-RUN chmod +x /lab/entrypoint.sh
+RUN chmod +x /lab/deploy/entrypoint.sh
 ENTRYPOINT ["/bin/bash", "/lab/deploy/entrypoint.sh"]
