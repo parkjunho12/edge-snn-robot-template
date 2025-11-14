@@ -29,13 +29,13 @@ RUN python -m pip install --upgrade pip && \
     pip install --no-cache-dir -r /lab/requirements.txt
 
 # 앱 소스 복사
-COPY ../src /lab/src
+COPY src /lab/src
 
 # 기본 포트
 EXPOSE 8000
 
 # 엔트리포인트 복사 및 권한 부여
-COPY ./entrypoint.sh /lab/deploy/entrypoint.sh
+COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
 RUN chmod +x /lab/deploy/entrypoint.sh
 
 # 비루트 유저 생성 및 폴더 소유권 변경
