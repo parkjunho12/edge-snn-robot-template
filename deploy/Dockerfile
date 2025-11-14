@@ -29,7 +29,7 @@ RUN python -m pip install --upgrade pip && \
     pip install --no-cache-dir -r /lab/requirements.txt
 
 # 앱 소스 복사
-COPY src /lab/src
+COPY ../src /lab/src
 
 # 기본 포트
 EXPOSE 8000
