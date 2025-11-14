@@ -51,7 +51,7 @@ jobs:
         run: flake8 --max-line-length 100
 
       - name: Tests
-        run: pytest -q
+        run: PYTHONPATH=$PYTHONPATH:$(pwd) pytest -q
 
   # --- Release: main push 시 버전업 + 빌드/푸시 ---
   release:
