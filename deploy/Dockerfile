@@ -35,7 +35,7 @@ COPY src /lab/src
 EXPOSE 8000
 
 # 엔트리포인트 복사 및 권한 부여
-COPY deploy/entrypoint.sh /lab/deploy/entrypoint.sh
+COPY ./entrypoint.sh /lab/deploy/entrypoint.sh
 RUN chmod +x /lab/deploy/entrypoint.sh
 
 # 비루트 유저 생성 및 폴더 소유권 변경
