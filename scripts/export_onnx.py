@@ -1,4 +1,4 @@
-import torch, onnx
+import torch
 from src.models.hybrid_tcnsnn import HybridTCNSNN
 
 if __name__ == "__main__":
