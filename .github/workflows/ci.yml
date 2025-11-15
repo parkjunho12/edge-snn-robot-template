@@ -146,8 +146,6 @@ jobs:
             docker.io/ghdlwnsgh12/edge-snn-robot-template 
           tags: |
             type=raw,value=v${{ steps.ver.outputs.next }}   # 새 버전 태그
-            type=ref,event=branch                           # main
-            type=sha,format=short                           # SHA
             type=raw,value=latest,enable=true               # latest 항상 부여
 
       - name: Build & Push
