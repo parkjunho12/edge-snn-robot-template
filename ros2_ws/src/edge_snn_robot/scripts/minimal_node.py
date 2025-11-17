@@ -4,15 +4,15 @@ from rclpy.node import Node
 
 
 class Minimal(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("edge_snn_minimal")
         self.timer = self.create_timer(1.0, self.tick)
 
-    def tick(self):
+    def tick(self) -> None:
         self.get_logger().info("Edge SNN Robot node alive")
 
 
-def main():
+def main() -> None:
     rclpy.init()
     n = Minimal()
     rclpy.spin(n)

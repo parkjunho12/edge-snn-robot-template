@@ -1,0 +1,33 @@
+[project]
+name = "edge-snn-robot-template"
+version = "0.1.0"
+description = "SNN/TCN-based edge robotics template (IO + pipes + infer server)."
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "numpy",
+  "opencv-python",
+  "pyserial",
+  "pydantic",
+  "pytest",
+  "mypy",
+  "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "src/infer_server", "tests"]
+select = ["E", "F", "I"]
+ignore = ["E203", "E501"]  # black 스타일과의 충돌 방지용 예시
+exclude = ["venv", ".venv", "build", "dist"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+mypy_path = ["src", "src/infer_server"]
+strict_optional = true

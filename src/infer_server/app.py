@@ -1,8 +1,10 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
 import time
+
 import psutil
 import torch
+from fastapi import FastAPI
+from pydantic import BaseModel
+
 from src.models.hybrid_tcnsnn import HybridTCNSNN
 
 app = FastAPI(title="Edge SNN Robot Dashboard")
@@ -17,12 +19,12 @@ class InferenceInput(BaseModel):
 
 
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/infer")
-def infer(inp: InferenceInput):
+def infer(inp: InferenceInput) -> dict[str, str]:
     x = torch.rand(inp.batch, inp.channels, inp.length)
     t0 = time.perf_counter()
     with torch.inference_mode():
@@ -35,3 +37,8 @@ def infer(inp: InferenceInput):
         "cpu_percent": psutil.cpu_percent(interval=None),
         "shape": list(z.shape),
     }
+
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"message": "edge-snn-robot-template infer server"}

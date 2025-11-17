@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+      "ts": { "type": "number" },
+      "w": { "type": "integer" },
+      "h": { "type": "integer" },
+      "format": { "type": "string" },
+      "data_b64": { "type": "string" }
+    },
+    "required": ["ts", "w", "h", "format", "data_b64"]
+  }
