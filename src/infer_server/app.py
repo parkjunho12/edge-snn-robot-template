@@ -3,13 +3,30 @@ import time
 import psutil
 import torch
 from fastapi import FastAPI
+from src.config import Settings, build_ninapro_cfg
+from src.emg_io.emg_stream import EMGMode, get_emg_stream
 from pydantic import BaseModel
 
 from src.models.hybrid_tcnsnn import HybridTCNSNN
 
+settings = Settings()
 app = FastAPI(title="Edge SNN Robot Dashboard")
 model = HybridTCNSNN()
 
+if settings.emg_mode == EMGMode.NINAPRO:
+    
+    ninapro_cfg = build_ninapro_cfg(settings)
+    emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
+elif settings.emg_mode == EMGMode.REALTIME:
+    emg_stream = get_emg_stream(
+        EMGMode.REALTIME,
+        port=settings.emg_port,
+        win=settings.emg_win,
+        ch=settings.emg_ch,
+        fs=settings.emg_fs,
+    )
+else:
+    emg_stream = get_emg_stream(EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs)
 
 class InferenceInput(BaseModel):
     batch: int = 1
@@ -32,10 +49,10 @@ def infer(inp: InferenceInput) -> dict[str, str]:
     dt = (time.perf_counter() - t0) * 1000.0
     spikes = float((s > 0).sum().item())
     return {
-        "latency_ms": dt,
-        "spikes": spikes,
-        "cpu_percent": psutil.cpu_percent(interval=None),
-        "shape": list(z.shape),
+        "latency_ms": str(dt),
+        "spikes": str(spikes),
+        "cpu_percent": str(psutil.cpu_percent(interval=None)),
+        "shape": str(list(z.shape)),
     }
 
 
