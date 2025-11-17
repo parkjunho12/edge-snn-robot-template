@@ -1,9 +1,9 @@
-import time
 import statistics
-from typing import Callable
+import time
+from typing import Callable, Dict
 
 
-def bench(fn: Callable, warmup=5, iters=50):
+def bench(fn: Callable[[], None], warmup: int = 5, iters: int = 50) -> Dict[str, float]:
     for _ in range(warmup):
         fn()
     ts = []

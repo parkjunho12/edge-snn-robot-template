@@ -1,47 +1,89 @@
 # edge-snn-robot-template
 
 A production-ready template for **SNN/TCN-based edge robotics** projects (ROS2 + snnTorch + FastAPI + Docker).
-Focus: **latency**, **spike/energy metrics**, **edge deployment** (Pi/Jetson).
 
-## TL;DR
-- `/src`: models, control loop, IO.
-- `/ros2_ws`: ROS2 nodes and messages.
-- `/eval`: latency/energy metrics tooling.
-- `/deploy`: Dockerfile + compose for edge.
-- `/firmware`: ESP32/OpenMV stubs.
-- `/docs`: MkDocs site; includes BOM options.
-- `/tests`: pytest smoke tests.
-- CI: lint + unit + Docker build.
+Focus areas:
+
+- **Latency-aware control** (ms-level end-to-end)
+- **Spike / energy metrics** (spike counts, firing rate, synaptic events)
+- **Edge deployment** (Jetson / Raspberry Pi / x86 + Docker)
+- **Signal-driven control** (EMG / IMU as first-class inputs, vision optional)
+
+## ✨ What this repo gives you
+
+- A **Python “core loop”**: sensor stream → encoder → SNN/TCN → control command
+- A minimal **FastAPI inference server** with room for dashboards
+- Hooks for **ROS2 nodes** (mobile base or robot arm)
+- Tooling for **latency and spike-based energy evaluation**
+- A **deployable Docker image** for edge devices
+
+You can treat this as a starting point for:
+
+- EMG-driven **robot arm / manipulator control**
+- EMG/IMU-driven **mobile robots** (TurtleBot, diff-drive base)
+- Simulation-only pipelines (Gazebo, fake sensors) for algorithm work
+
+## 🧩 Folder layout
+
+- `src/`
+  - `models/` – TCN / SNN / Hybrid TCN–SNN models (PyTorch + snnTorch)
+  - `control/` – low-latency control loop (policy → command)
+  - `infer_server/` – FastAPI app exposing `/infer` and `/health`
+  - `io/` – encoders/decoders (e.g. EMG/IMU → spikes, sliding windows)
+- `ros2_ws/`
+  - ROS2 nodes to bridge topics ↔ inference server
+  - Messages/services for commands & sensor streams
+- `eval/`
+  - Latency benchmark scripts
+  - Spike/energy metric tooling
+- `deploy/`
+  - Dockerfile + `docker-compose.yml` for edge devices (Pi / Jetson / x86)
+  - Entrypoint script + env template
+- `firmware/`
+  - ESP32 / OpenMV example stubs for low-level I/O
+- `docs/`
+  - MkDocs skeleton (architecture notes, BOM, wiring examples)
+- `tests/`
+  - `pytest` smoke tests (imports + simple forward pass)
+- `notebooks/`
+  - Prototyping & analysis notebooks (optional)
+
+CI:
+
+- Lint (ruff)
+- Type-check (mypy)
+- Unit tests (pytest)
+- Docker build
 
 ## Architecture
 
 **High-level layout**
 
-- `src/`  
-  - `models/`: TCN / SNN / Hybrid TCN–SNN models (PyTorch + snnTorch)  
-  - `control/`: low-latency control loop (policy → command)  
-  - `infer_server/`: FastAPI app exposing `/infer` and health endpoints  
+- `src/`
+  - `models/`: TCN / SNN / Hybrid TCN–SNN models (PyTorch + snnTorch)
+  - `control/`: low-latency control loop (policy → command)
+  - `infer_server/`: FastAPI app exposing `/infer` and health endpoints
   - `io/`: encoders/decoders (e.g. EMG → spikes, sensor windows)
 
-- `ros2_ws/`  
-  - ROS2 nodes to bridge topics ↔ inference server  
+- `ros2_ws/`
+  - ROS2 nodes to bridge topics ↔ inference server
   - messages/services for commands, sensor streams
 
-- `eval/`  
-  - latency benchmark scripts  
+- `eval/`
+  - latency benchmark scripts
   - spike/energy metric tooling
 
-- `deploy/`  
-  - Dockerfile + docker-compose.yml for edge devices (Pi/Jetson)  
+- `deploy/`
+  - Dockerfile + docker-compose.yml for edge devices (Pi/Jetson)
   - entrypoint + env template
 
-- `firmware/`  
+- `firmware/`
   - ESP32 / OpenMV example stubs for low-level I/O
 
-- `docs/`  
+- `docs/`
   - MkDocs site skeleton (architecture notes, BOM, wiring examples)
 
-- `tests/`  
+- `tests/`
   - pytest smoke tests (import + simple forward pass)
 
 
@@ -59,7 +101,9 @@ uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 
 # 4) ROS2 (optional)
 source /opt/ros/humble/setup.bash
+cd ros2_ws
 colcon build --symlink-install
+
 
 # 5) Docker build (edge)
 docker build -t edge-snn-robot:dev deploy/
@@ -69,13 +113,12 @@ docker compose -f deploy/docker-compose.yml up
 ## Architecture
 ```mermaid
 flowchart LR
-  IMU[IMU / EMG / Camera] --> ENC[Spike / Window Encoder]
+  SENS[EMG / IMU] --> ENC[Spike / Window Encoder]
   ENC --> HYB[Hybrid TCN-SNN Inference]
   HYB --> CTRL[Controller : PID / Policy]
   CTRL --> ACT[Robot Actuators]
   HYB --> MET[Metrics: latency, spikes, energy]
   MET --> API_NODE[FastAPI Dashboard]
-  
 ```
 
 ## Roadmap (6 months)
