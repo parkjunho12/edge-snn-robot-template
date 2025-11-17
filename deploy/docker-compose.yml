@@ -1,8 +1,10 @@
 services:
   edge-snn-robot:
-    build: ./
+    build:
+      context: .                 # 컨텍스트는 리포 루트
     image: edge-snn-robot:dev
     ports: ["8000:8000"]
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+
