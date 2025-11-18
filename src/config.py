@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from pydantic_settings import BaseSettings
-from pydantic import Field
 from src.emg_io.emg_stream import EMGMode
 from src.data.ninapro import NinaProConfig
 

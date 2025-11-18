@@ -14,7 +14,6 @@ app = FastAPI(title="Edge SNN Robot Dashboard")
 model = HybridTCNSNN()
 
 if settings.emg_mode == EMGMode.NINAPRO:
-    
     ninapro_cfg = build_ninapro_cfg(settings)
     emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
 elif settings.emg_mode == EMGMode.REALTIME:
@@ -29,6 +28,8 @@ else:
     emg_stream = get_emg_stream(EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs)
 
 class InferenceInput(BaseModel):
+    
+    
     batch: int = 1
     channels: int = 8
     length: int = 64
