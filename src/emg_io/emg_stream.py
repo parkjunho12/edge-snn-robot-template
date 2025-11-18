@@ -132,8 +132,7 @@ class DummyEMGStream:
         dt = self.win / self.fs
         t = time.time()
         while True:
-            samples = np.random.randn(self.win, self.ch)
-            .astype(np.float32)
+            samples = np.random.randn(self.win, self.ch).astype(np.float32)
             yield EMG(ts=t, samples=samples)
             t += dt
             if self.realtime:
