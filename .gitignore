@@ -73,6 +73,8 @@ runs/
 *.pth
 *.h5
 *.ckpt
+*.mat
+*.npz
 
 # --- MkDocs / Documentation build ---
 site/
