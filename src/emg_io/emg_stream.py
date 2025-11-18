@@ -98,8 +98,7 @@ class RealtimeEMGStream:
         dt = self.win / self.fs
         try:
             while True:
-                chunk = await asyncio
-                    .to_thread(ser.read, ser.in_waiting or 1)
+                chunk = await asyncio.to_thread(ser.read, ser.in_waiting or 1)
                 if chunk:
                     buf.extend(chunk)
                 bytes_per_sample = 2
