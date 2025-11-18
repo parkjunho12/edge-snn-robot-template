@@ -12,6 +12,7 @@ import serial.tools.list_ports as lp
 
 from src.data.ninapro import NinaProConfig, NinaProWindows, load_ninapro_mat
 
+from enum import Enum
 
 class EMG(NamedTuple):
     ts: float
@@ -128,10 +129,6 @@ class DummyEMGStream:
             t += dt
             if self.realtime:
                 await asyncio.sleep(dt)
-
-
-from enum import Enum
-from pathlib import Path
 
 
 class EMGMode(str, Enum):
