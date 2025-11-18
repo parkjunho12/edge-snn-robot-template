@@ -14,6 +14,7 @@ from src.data.ninapro import NinaProConfig, NinaProWindows, load_ninapro_mat
 
 from enum import Enum
 
+
 class EMG(NamedTuple):
     ts: float
     samples: NDArray[np.float32]
