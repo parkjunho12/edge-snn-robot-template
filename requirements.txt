@@ -14,3 +14,4 @@ psutil
 opencv-python
 pytest
 flake8
+pyserial>=3.5
