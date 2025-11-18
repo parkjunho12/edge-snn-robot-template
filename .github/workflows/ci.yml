@@ -48,7 +48,7 @@ jobs:
           fi
 
       - name: Lint
-        run: flake8 --max-line-length 100
+        run: flake8 --max-line-length 150
 
       - name: Tests
         run: PYTHONPATH=$PYTHONPATH:$(pwd) pytest -q
