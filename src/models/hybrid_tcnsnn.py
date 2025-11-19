@@ -25,7 +25,7 @@ class HybridTCNSNN(nn.Module):
     def __init__(self, c_in: int = 8, hidden: int = 32, classes: int = 3, seq: int = 64) -> None:
         super().__init__()
         self.tcn1 = TCNBlock(c_in, hidden, k=3, d=1)
-        self.tsn = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
+        self.lif = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
         self.readout = nn.Linear(hidden * seq, classes)
         self.seq = seq
 
@@ -35,8 +35,11 @@ class HybridTCNSNN(nn.Module):
         spk_seq = []
         mem = torch.zeros_like(h)
         for _ in range(num_steps):
-            spk, mem = self.tsn(h, mem)
+            spk, mem = self.lif(h, mem)
             spk_seq.append(spk)
         s = torch.stack(spk_seq).mean(0)  # [B, hidden, T]
         z = self.readout(s.flatten(1))
         return z, s
+    
+
+
