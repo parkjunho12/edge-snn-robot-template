@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
 def build_ninapro_cfg(settings: Settings) -> NinaProConfig:
     cfg = NinaProConfig(
-        path=Path("data/ninapro/s1.mat"),
+        path=Path("../data/s1.mat"),
         fs=2000,
         win=200,
         hop=200,

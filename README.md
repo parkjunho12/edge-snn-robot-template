@@ -88,8 +88,8 @@ docker compose -f deploy/docker-compose.yml up
 ## Architecture
 ```mermaid
 flowchart LR
-  SENS[sEMG] --> PREPROC[notch/bandpass/z-score]
-  PREPROC[notch/bandpass/z-score] --> ENC[Spike / Window Encoder]
+  SENS[sEMG] --> PREPROC[notch/z-score]
+  PREPROC[notch/z-score] --> ENC[Spike / Window Encoder]
   ENC --> HYB[Hybrid TCN-SNN Inference]
   HYB --> CTRL[Controller : PID / Policy]
   CTRL --> ACT[Robot Actuators]
