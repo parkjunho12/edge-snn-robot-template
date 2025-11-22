@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import Tuple, Dict, Any
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

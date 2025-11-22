@@ -6,8 +6,6 @@ import snntorch as snn
 from snntorch import surrogate
 import snntorch.spikegen as spikegen
 
-from torch.nn.utils.parametrizations import weight_norm
-
 
 class SpikeEncoder(nn.Module):
     """연속 신호를 스파이크로 변환하는 인코더"""
@@ -147,8 +145,6 @@ class SpikingNeuralNetwork(nn.Module):
 
     def forward(self, x):
         B, T, F = x.shape
-        # num_steps 고정 사용
-        num_steps = self.num_steps
 
         spikes = self.encoder(x)  # (num_steps, B, T_seq, C)  # latency 기준
         spikes = spikes.mean(dim=2).contiguous()  # (num_steps, B, C)
