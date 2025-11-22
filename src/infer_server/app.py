@@ -25,11 +25,12 @@ elif settings.emg_mode == EMGMode.REALTIME:
         fs=settings.emg_fs,
     )
 else:
-    emg_stream = get_emg_stream(EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs)
+    emg_stream = get_emg_stream(
+        EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs
+    )
+
 
 class InferenceInput(BaseModel):
-    
-    
     batch: int = 1
     channels: int = 8
     length: int = 64
