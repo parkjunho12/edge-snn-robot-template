@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.io import loadmat  # ★ 중요
 
-import os
-import scipy.io as sio
 from scipy.signal import butter, filtfilt
 
 
