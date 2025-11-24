@@ -11,7 +11,7 @@ from src.models.hybrid_tcnsnn import HybridTCNSNN
 
 settings = Settings()
 app = FastAPI(title="Edge SNN Robot Dashboard")
-model = HybridTCNSNN()
+model = HybridTCNSNN(input_size=16, num_classes=7)
 
 if settings.emg_mode == EMGMode.NINAPRO:
     ninapro_cfg = build_ninapro_cfg(settings)
