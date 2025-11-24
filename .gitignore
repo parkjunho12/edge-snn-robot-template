@@ -160,3 +160,11 @@ deploy/.env
 
 # Cache
 *.cache/
+
+output/*.txt
+output/delta/*.png
+output/latency/*.png
+output/rate/*.png
+output/delta/*.pth
+output/latency/*.pth
+output/rate/*.pth
