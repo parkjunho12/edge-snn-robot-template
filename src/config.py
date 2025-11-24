@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from src.emg_io.emg_stream import EMGMode
-from src.emg_io.data.ninapro import NinaProConfig
+from src.emg_io.data_src.ninapro import NinaProConfig
 
 
 class Settings(BaseSettings):

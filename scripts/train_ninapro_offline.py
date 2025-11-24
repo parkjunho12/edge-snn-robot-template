@@ -7,8 +7,8 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import torch
 from torch.utils.data import DataLoader
 
-from src.emg_io.data.emg_dataset import EMGDataset
-from src.emg_io.data.ninapro import (
+from src.emg_io.data_src.emg_dataset import EMGDataset
+from src.emg_io.data_src.ninapro import (
     load_ninapro_data,
     preprocess_data_for_networks,
 )  # bandpass_filter 필요시 여기서 import

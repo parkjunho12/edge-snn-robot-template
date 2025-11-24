@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 import serial
 import serial.tools.list_ports as lp
 
-from src.emg_io.data.ninapro import NinaProConfig, NinaProWindows, load_ninapro_mat
+from src.emg_io.data_src.ninapro import NinaProConfig, NinaProWindows, load_ninapro_mat
 
 from enum import Enum
 
