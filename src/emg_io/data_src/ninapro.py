@@ -174,8 +174,8 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
     step_size = window_size - overlap
 
     for i in range(0, len(emg_data) - window_size + 1, step_size):
-        window = emg_data[i : i + window_size]
-        window_label = labels[i : i + window_size]
+        window = emg_data[i :i + window_size]
+        window_label = labels[i :i + window_size]
 
         # 윈도우 내에서 가장 빈번한 라벨 사용
         unique_labels, counts = np.unique(window_label, return_counts=True)
