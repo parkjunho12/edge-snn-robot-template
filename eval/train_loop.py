@@ -12,7 +12,13 @@ print(f"[train_loop] Using device: {device}")
 
 
 def train_model(
-    model, train_loader, val_loader, num_epochs=100, lr=0.001, title_prefix="model"
+    model,
+    train_loader,
+    val_loader,
+    num_epochs=1,
+    lr=0.001,
+    title_prefix="model",
+    encoding_type="rate",
 ):
     """모델 훈련 함수"""
     model = model.to(device)
@@ -84,7 +90,8 @@ def train_model(
             patience_counter = 0
             # Save best model
             torch.save(
-                model.state_dict(), f"./output/latency/best_{title_prefix}_latency.pth"
+                model.state_dict(),
+                f"./output/{encoding_type}/best_{title_prefix}_{encoding_type}.pth",
             )
         else:
             patience_counter += 1
@@ -102,7 +109,7 @@ def train_model(
 
     # Load best model
     model.load_state_dict(
-        torch.load(f"./output/latency/best_{title_prefix}_latency.pth")
+        torch.load(f"./output/{encoding_type}/best_{title_prefix}_{encoding_type}.pth")
     )
 
     history = {

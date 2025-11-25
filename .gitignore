@@ -164,7 +164,9 @@ deploy/.env
 output/*.txt
 output/delta/*.png
 output/latency/*.png
+output/latency_prev/*.png
 output/rate/*.png
 output/delta/*.pth
 output/latency/*.pth
+output/latency_prev/*.pth
 output/rate/*.pth

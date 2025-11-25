@@ -7,6 +7,10 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import torch
 from torch.utils.data import DataLoader
 
+from pathlib import Path
+import json
+import joblib
+
 from src.emg_io.data_src.emg_dataset import EMGDataset
 from src.emg_io.data_src.ninapro import (
     load_ninapro_data,
@@ -24,6 +28,7 @@ from eval.plots import (
     visualize_snn_spikes,
 )
 
+
 warnings.filterwarnings("ignore")
 
 
@@ -35,6 +40,9 @@ def main():
     encoding_type = "latency"
     num_steps = 20
     print("=== EMG Classification with TCN and SNN using PyTorch ===")
+
+    ARTIFACT_DIR = Path(f"./output/{encoding_type}")
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
     # 1. 데이터 로드
     print("\n1. Loading data...")
@@ -114,7 +122,7 @@ def main():
     snn_test_acc, snn_f1_macro, snn_f1_weighted, snn_preds, snn_targets = (
         evaluate_model(snn_model, test_loader)
     )
-    results["SNN(latency)"] = {
+    results[f"SNN(${encoding_type})"] = {
         "test_acc": snn_test_acc,
         "f1_macro": snn_f1_macro,
         "f1_weighted": snn_f1_weighted,
@@ -160,7 +168,7 @@ def main():
         hybrid_fusion_preds,
         hybrid_fusion_targets,
     ) = evaluate_model(hybrid_fusion_model, test_loader)
-    results["Hybrid(latency)"] = {
+    results[f"Hybrid(${encoding_type})"] = {
         "test_acc": hybrid_fusion_test_acc,
         "f1_macro": hybrid_fusion_f1_macro,
         "f1_weighted": hybrid_fusion_f1_weighted,
@@ -191,7 +199,7 @@ def main():
         hybrid_preds,
         hybrid_targets,
     ) = evaluate_model(hybrid_model, test_loader)
-    results["SpikingTCN(latency)"] = {
+    results[f"SpikingTCN({encoding_type})"] = {
         "test_acc": hybrid_test_acc,
         "f1_macro": hybrid_f1_macro,
         "f1_weighted": hybrid_f1_weighted,
@@ -203,29 +211,93 @@ def main():
     # 8. 학습 결과 시각화
     print("\n7. Plotting Training History...")
     plot_training_history(
-        histories, ["SNN(latency)", "TCN", "Hybrid(latency)", "SpikingTCN(latency)"]
+        histories,
+        [
+            f"SNN({encoding_type})",
+            "TCN",
+            f"Hybrid({encoding_type})",
+            f"SpikingTCN({encoding_type})",
+        ],
+        encoding_type,
     )
 
     print("\n8. Plotting Test Accuracy Comparison...")
-    plot_model_comparison_results(results)
+    plot_model_comparison_results(results, encoding_type)
 
     print("\n9. Confusion Matrices")
     for model_name, result in results.items():
         plot_confusion_matrix(
-            result["targets"], result["preds"], class_names, model_name
+            result["targets"], result["preds"], class_names, model_name, encoding_type
         )
 
     # 10. SNN Spike 시각화
     print("\n10. Visualizing Spikes (Hybrid Model)...")
     sample_input = torch.FloatTensor(X_test_scaled[:1])
 
-    visualize_snn_spikes(snn_model, sample_input, title_prefix="SNNClassifier(latency)")
-
     visualize_snn_spikes(
-        hybrid_fusion_model, sample_input, title_prefix="Hybrid(latency)"
+        snn_model,
+        sample_input,
+        title_prefix=f"SNNClassifier({encoding_type})",
+        encoding_type=encoding_type,
     )
 
-    visualize_snn_spikes(hybrid_model, sample_input, title_prefix="SpikingTCN(latency)")
+    visualize_snn_spikes(
+        hybrid_fusion_model,
+        sample_input,
+        title_prefix=f"Hybrid({encoding_type})",
+        encoding_type=encoding_type,
+    )
+
+    visualize_snn_spikes(
+        hybrid_model,
+        sample_input,
+        title_prefix=f"SpikingTCN({encoding_type})",
+        encoding_type=encoding_type,
+    )
+
+    print("\n11. Exporting deployment artifacts...")
+
+    # 1) SpikingTCN 모델 가중치 저장 (.pth)
+    # hybrid_model 이 바로 SpikingTCN 인스턴스
+    model_path = ARTIFACT_DIR / f"spiking_tcn_{encoding_type}_best.pth"
+    torch.save(hybrid_model.state_dict(), model_path)
+    print(f"[Export] Saved SpikingTCN weights to: {model_path}")
+
+    # 2) EMG StandardScaler 저장
+    scaler_path = ARTIFACT_DIR / "emg_scaler.pkl"
+    joblib.dump(scaler, scaler_path)
+    print(f"[Export] Saved EMG scaler to: {scaler_path}")
+
+    # 3) LabelEncoder 저장
+    label_encoder_path = ARTIFACT_DIR / "label_encoder.pkl"
+    joblib.dump(label_encoder, label_encoder_path)
+    print(f"[Export] Saved LabelEncoder to: {label_encoder_path}")
+
+    # 4) EMG 메타 정보 저장 (emg_meta.json)
+    window_size = 200  # preprocess_data_for_networks 안에서 쓴 값
+    overlap = 100
+    num_channels = int(X_train.shape[-1])
+    num_classes = int(num_classes)  # 이미 위에서 계산됨
+    sampling_rate = 2000  # Ninapro DB6 기준 (위에 fs=2000 주석도 있음)
+
+    emg_meta = {
+        "model_name": "SpikingTCN",
+        "encoding_type": encoding_type,
+        "window_size": window_size,
+        "overlap": overlap,
+        "num_channels": num_channels,
+        "num_steps": num_steps,
+        "num_classes": num_classes,
+        "sampling_rate": sampling_rate,
+        "scaler": "StandardScaler",
+        "label_encoder": "LabelEncoder",
+        "data_path": DATA_PATH,
+    }
+
+    meta_path = ARTIFACT_DIR / "emg_meta.json"
+    with meta_path.open("w", encoding="utf-8") as f:
+        json.dump(emg_meta, f, indent=2)
+    print(f"[Export] Saved EMG meta config to: {meta_path}")
 
     print("\n=== All Done ===")
     return hybrid_model, hybrid_history, scaler, label_encoder

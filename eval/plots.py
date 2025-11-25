@@ -13,7 +13,7 @@ from src.models.snn_core import SNNClassifier
 from src.models.hybrid_tcnsnn import HybridTCNSNN
 
 
-def plot_training_history(histories, model_names):
+def plot_training_history(histories, model_names, encoding_type):
     """훈련 과정 시각화"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
@@ -62,12 +62,14 @@ def plot_training_history(histories, model_names):
 
     plt.suptitle("Model Training Comparison", fontsize=16, fontweight="bold")
     plt.tight_layout()
-    count_path = os.path.join("./output/latency", "model_trainint_latency4.png")
+    count_path = os.path.join(
+        f"./output/{encoding_type}", f"model_trainint_{encoding_type}.png"
+    )
     plt.savefig(count_path)
     plt.close(fig)
 
 
-def plot_confusion_matrix(y_true, y_pred, class_names, model_name):
+def plot_confusion_matrix(y_true, y_pred, class_names, model_name, encoding_type):
     """혼동 행렬 시각화"""
     cm = confusion_matrix(y_true, y_pred)
 
@@ -84,12 +86,14 @@ def plot_confusion_matrix(y_true, y_pred, class_names, model_name):
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
     plt.tight_layout()
-    count_path = os.path.join("./output/latency", "rasterplot_latency4.png")
+    count_path = os.path.join(
+        f"./output/{encoding_type}", f"rasterplot_{encoding_type}.png"
+    )
     plt.savefig(count_path)
     plt.close(fig)
 
 
-def visualize_snn_spikes(model, x, title_prefix="Model"):
+def visualize_snn_spikes(model, x, title_prefix="Model", encoding_type="rate"):
     model.eval()
     with torch.no_grad():
         # 공통: (T, B, N) 형태의 spike 시퀀스를 확보
@@ -115,7 +119,7 @@ def visualize_snn_spikes(model, x, title_prefix="Model"):
         print(f"Mean firing rate per neuron: {rate_per_neuron.mean():.4f}")
         print(f"Max firing rate per neuron:  {rate_per_neuron.max():.4f}")
 
-        os.makedirs("./output/latency", exist_ok=True)
+        os.makedirs("./output/{encoding_type}", exist_ok=True)
 
         # 히스토그램 (두 모델 동일)
         fig = plt.figure()
@@ -124,7 +128,9 @@ def visualize_snn_spikes(model, x, title_prefix="Model"):
         plt.xlabel("Firing rate (spikes / timestep)")
         plt.ylabel("Neuron count")
         plt.savefig(
-            os.path.join("./output/latency", f"{title_prefix}_latency_hist.png")
+            os.path.join(
+                f"./output/{encoding_type}", f"{title_prefix}_{encoding_type}_hist.png"
+            )
         )
         plt.close(fig)
 
@@ -150,11 +156,13 @@ def visualize_snn_spikes(model, x, title_prefix="Model"):
         plt.title(f"{title_prefix} Raster (first {max_neurons} neurons)")
         plt.xlabel("Time step")
         plt.ylabel("Neuron index")
-        plt.savefig(os.path.join("./output/latency", f"{title_prefix}_raster.png"))
+        plt.savefig(
+            os.path.join(f"./output/{encoding_type}", f"{title_prefix}_raster.png")
+        )
         plt.close(fig)
 
 
-def plot_model_comparison_results(results):
+def plot_model_comparison_results(results, encoding_type):
     """모델 성능 비교 결과 시각화"""
     model_names = list(results.keys())
     accuracies = [results[name]["test_acc"] for name in model_names]
@@ -189,6 +197,8 @@ def plot_model_comparison_results(results):
     plt.grid(True, alpha=0.3, axis="y")
     plt.tight_layout()
 
-    count_path = os.path.join("./output/latency", "model_performance_com_latency4.png")
+    count_path = os.path.join(
+        f"./output/{encoding_type}", f"model_performance_com_{encoding_type}.png"
+    )
     plt.savefig(count_path)
     plt.close(fig)
