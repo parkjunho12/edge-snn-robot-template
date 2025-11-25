@@ -170,3 +170,9 @@ output/delta/*.pth
 output/latency/*.pth
 output/latency_prev/*.pth
 output/rate/*.pth
+output/latency/*.pkl
+output/rate/*.pkl
+output/delta/*.pkl
+output/latency/*.json
+output/rate/*.json
+output/delta/*.json

@@ -119,7 +119,7 @@ def visualize_snn_spikes(model, x, title_prefix="Model", encoding_type="rate"):
         print(f"Mean firing rate per neuron: {rate_per_neuron.mean():.4f}")
         print(f"Max firing rate per neuron:  {rate_per_neuron.max():.4f}")
 
-        os.makedirs("./output/{encoding_type}", exist_ok=True)
+        os.makedirs(f"./output/{encoding_type}", exist_ok=True)
 
         # 히스토그램 (두 모델 동일)
         fig = plt.figure()
