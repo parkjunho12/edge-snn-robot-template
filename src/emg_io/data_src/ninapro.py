@@ -163,7 +163,7 @@ def bandpass_filter(signal, lowcut=20, highcut=450, fs=2000, order=4):
 def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100):
     """네트워크를 위한 EMG 데이터 전처리"""
     # 레이블이 0인 rest 구간 제거 (선택사항)
-    non_zero_mask = labels != 1
+    non_zero_mask = labels != 0
     emg_data = emg_data[non_zero_mask]
     labels = labels[non_zero_mask]    
 
@@ -186,9 +186,8 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
         # 윈도우 내에서 가장 빈번한 라벨 사용
         unique_labels, counts = np.unique(window_label, return_counts=True)
         dominant_label = unique_labels[np.argmax(counts)]
-        if dominant_label != 0:
-            windowed_sequences.append(window)
-            windowed_labels.append(dominant_label)
+        windowed_sequences.append(window)
+        windowed_labels.append(dominant_label)
     print(results)
     
 

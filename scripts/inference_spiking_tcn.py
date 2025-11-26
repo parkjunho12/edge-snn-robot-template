@@ -28,6 +28,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import torch
+import torch.nn as nn
 
 from src.models.spiking_tcn import SpikingTCN
 
@@ -167,6 +168,15 @@ def parse_args():
 
     return parser.parse_args()
 
+class ExportWrapper(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        logits, _ = self.model(x, return_spikes=True)
+        return logits
+
 
 def main():
     args = parse_args()
@@ -252,6 +262,25 @@ def main():
         print("    - Prediction matches GT?      :", is_correct)
 
     print("\n=== Inference complete ===")
+    onnx_path = artifact_dir / "spiking_tcn_inference.onnx"
+    
+    print(f"Exporting to ONNX: {onnx_path}")
+    model_export = ExportWrapper(model)
+    torch.onnx.export(
+        model_export,
+        emg_tensor,
+        onnx_path.as_posix(),
+        export_params=True,
+        opset_version=17,
+        do_constant_folding=True,
+        input_names=["emg"],
+        output_names=["logits"],
+        dynamic_axes={
+            "emg": {0: "batch_size", 1: "time_steps"},
+            "logits": {0: "batch_size"},
+        },
+    )
+    print("✅ ONNX export done:", onnx_path)
 
 
 if __name__ == "__main__":
