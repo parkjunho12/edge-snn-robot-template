@@ -174,8 +174,8 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
     step_size = window_size - overlap
     results = {}
     for i in range(0, len(emg_data) - window_size + 1, step_size):
-        window = emg_data[i : i + window_size]
-        window_label = labels[i : i + window_size]
+        window = emg_data[i:i + window_size]
+        window_label = labels[i:i + window_size]
         for j in range(0, len(window_label)):
             if results.get(f"{window_label[j]}") is not None:
                 results[f"{window_label[j]}"] = results[f"{window_label[j]}"] + 1
