@@ -165,7 +165,7 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
     # 레이블이 0인 rest 구간 제거 (선택사항)
     non_zero_mask = labels != 0
     emg_data = emg_data[non_zero_mask]
-    labels = labels[non_zero_mask]    
+    labels = labels[non_zero_mask]
 
     # 윈도우 기반 시퀀스 생성
     windowed_sequences = []
@@ -174,14 +174,13 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
     step_size = window_size - overlap
     results = {}
     for i in range(0, len(emg_data) - window_size + 1, step_size):
-        window = emg_data[i:i + window_size]
-        window_label = labels[i:i + window_size]
+        window = emg_data[i : i + window_size]
+        window_label = labels[i : i + window_size]
         for j in range(0, len(window_label)):
             if results.get(f"{window_label[j]}") is not None:
                 results[f"{window_label[j]}"] = results[f"{window_label[j]}"] + 1
             else:
                 results[f"{window_label[j]}"] = 1
-        
 
         # 윈도우 내에서 가장 빈번한 라벨 사용
         unique_labels, counts = np.unique(window_label, return_counts=True)
@@ -189,6 +188,5 @@ def preprocess_data_for_networks(emg_data, labels, window_size=200, overlap=100)
         windowed_sequences.append(window)
         windowed_labels.append(dominant_label)
     print(results)
-    
 
     return np.array(windowed_sequences), np.array(windowed_labels)
