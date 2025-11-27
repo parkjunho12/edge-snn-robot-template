@@ -59,12 +59,16 @@ CI:
 
 ## Quickstart
 ```bash
-# 1) (optional) create repo
-git init && git add . && git commit -m "init: edge-snn-robot-template"
+# 1) clone repo
+git clone https://github.com/parkjunho12/edge-snn-robot-template.git
 
 # 2) Python env
 python -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
+
+# 3) create datasets
+mkdir -p src/data
 
 # 3) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
