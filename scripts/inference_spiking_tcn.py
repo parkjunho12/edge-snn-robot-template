@@ -160,13 +160,14 @@ def parse_args():
         help="Use dummy random EMG window instead of loading from file",
     )
     parser.add_argument(
-    "--sample-from-mat",
-    type=str,
-    default=None,
-    help="Load EMG window from a .mat file (e.g., ./src/data/s2.mat)",
+        "--sample-from-mat",
+        type=str,
+        default=None,
+        help="Load EMG window from a .mat file (e.g., ./src/data/s2.mat)",
     )
 
     return parser.parse_args()
+
 
 class ExportWrapper(nn.Module):
     def __init__(self, model):
@@ -191,7 +192,7 @@ def main():
     print("\n[2] Building SpikingTCN model...")
     model = build_model_from_meta(emg_meta, state_dict)
     print("    - Model ready (eval mode).")
-    
+
     window_size = int(emg_meta["window_size"])
     num_channels = int(emg_meta["num_channels"])
 
@@ -217,7 +218,6 @@ def main():
         emg_window = X_win[sample_index]
         true_label_raw = int(y_win[sample_index])
         print(f"    - Selected window[0], shape: {emg_window.shape}")
-        
 
     # 3-2) NPY 로드
     elif args.emg_npy is not None:
@@ -247,14 +247,13 @@ def main():
     print("    - Predicted label       :", pred_label)
     print(f"    - Confidence (softmax)  : {conf:.4f}")
     print("    - Probabilities         :", probs)
-    
 
     # ✅ sample-from-mat 모드일 때만 GT 비교
     if true_label_raw is not None:
         # label_encoder는 s1 기준으로 fit 되어있지만,
         # s2도 같은 stimulus ID 스페이스(0~17)이므로 같은 매핑 사용 가능.
         true_idx = int(label_encoder.transform([true_label_raw])[0])
-        is_correct = (pred_idx == true_idx)
+        is_correct = pred_idx == true_idx
 
         print("\n[7] Ground Truth Check")
         print("    - Ground truth class index    :", true_idx)
@@ -263,7 +262,7 @@ def main():
 
     print("\n=== Inference complete ===")
     onnx_path = artifact_dir / "spiking_tcn_inference.onnx"
-    
+
     print(f"Exporting to ONNX: {onnx_path}")
     model_export = ExportWrapper(model)
     torch.onnx.export(

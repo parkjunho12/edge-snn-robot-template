@@ -26,55 +26,22 @@ class Chomp1d(nn.Module):
 
 class SpikingTemporalBlock(nn.Module):
     """Spiking 버전 Temporal Block (막전위 유지)"""
-
-    def __init__(
-        self,
-        n_inputs,
-        n_outputs,
-        kernel_size,
-        stride,
-        dilation,
-        padding,
-        dropout=0.2,
-        beta=0.9,
-        v_th=1.0,
-    ):
+    def __init__(self, n_inputs, n_outputs, kernel_size, stride, dilation, padding, dropout=0.2,
+                 beta=0.9, v_th=1.0):
         super().__init__()
-        self.conv1 = weight_norm(
-            nn.Conv1d(
-                n_inputs,
-                n_outputs,
-                kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation,
-            )
-        )
+        self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
+                                           stride=stride, padding=padding, dilation=dilation))
         self.chomp1 = Chomp1d(padding)
-        self.lif1 = snn.Leaky(
-            beta=beta, threshold=v_th, spike_grad=spike_grad, init_hidden=False
-        )
-        self.do1 = nn.Dropout(dropout)
+        self.lif1  = snn.Leaky(beta=beta, threshold=v_th, spike_grad=spike_grad, init_hidden=False)
+        self.do1   = nn.Dropout(dropout)
 
-        self.conv2 = weight_norm(
-            nn.Conv1d(
-                n_outputs,
-                n_outputs,
-                kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation,
-            )
-        )
+        self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
+                                           stride=stride, padding=padding, dilation=dilation))
         self.chomp2 = Chomp1d(padding)
-        self.lif2 = snn.Leaky(
-            beta=beta, threshold=v_th, spike_grad=spike_grad, init_hidden=False
-        )
-        self.do2 = nn.Dropout(dropout)
+        self.lif2  = snn.Leaky(beta=beta, threshold=v_th, spike_grad=spike_grad, init_hidden=False)
+        self.do2   = nn.Dropout(dropout)
 
-        self.downsample = (
-            nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
-        )
+        self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
 
     def forward(self, x, mem1, mem2, return_spk=False):
         x1 = self.chomp1(self.conv1(x))
@@ -98,78 +65,53 @@ class SpikingTemporalBlock(nn.Module):
 # ======================
 # Spiking Temporal ConvNet
 # ======================
+
 class SpikingTCN(nn.Module):
     """에너지 효율적인 Spiking-TCN (막전위 유지)"""
-
-    def __init__(
-        self,
-        num_inputs,
-        num_channels,
-        num_classes,
-        kernel_size=2,
-        dropout=0.2,
-        timesteps=10,
-        beta=0.9,
-        v_th=1.0,
-    ):
+    def __init__(self, num_inputs, num_channels, num_classes,
+                 kernel_size=2, dropout=0.2, timesteps=10, beta=0.9, v_th=1.0):
         super().__init__()
         self.timesteps = timesteps
-        self.encoder = SpikeEncoder(
-            encoding_type="latency", num_steps=timesteps, per_channel_norm=True
-        )
+        self.encoder = SpikeEncoder(encoding_type='rate', num_steps=timesteps)
 
         self.blocks = nn.ModuleList()
         for i in range(len(num_channels)):
-            dilation = 2**i
-            in_c = num_inputs if i == 0 else num_channels[i - 1]
+            dilation = 2 ** i
+            in_c  = num_inputs if i == 0 else num_channels[i-1]
             out_c = num_channels[i]
-            pad = (kernel_size - 1) * dilation
+            pad   = (kernel_size - 1) * dilation
             self.blocks.append(
-                SpikingTemporalBlock(
-                    in_c,
-                    out_c,
-                    kernel_size,
-                    1,
-                    dilation,
-                    pad,
-                    dropout=dropout,
-                    beta=beta,
-                    v_th=v_th,
-                )
+                SpikingTemporalBlock(in_c, out_c, kernel_size, 1, dilation, pad,
+                              dropout=dropout, beta=beta, v_th=v_th)
             )
 
-        self.classifier = nn.Linear(num_channels[-1], num_classes)
+        self.classifier = nn.Sequential(
+            nn.Linear(num_channels[-1], 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.BatchNorm1d(128),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout/2),
+            nn.Linear(64, num_classes)
+        )
 
-    @torch.no_grad()
-    def collect_spike_stats(self, spike_buffers, T_total):
-        """타임스텝 동안 누적된 스파이크로 간단 통계 산출"""
-        stats = {}
-        for bidx, buf in spike_buffers.items():
-            stats[f"block{bidx}_lif1_rate_per_ch"] = buf["lif1_sum"] / T_total  # (C,)
-            stats[f"block{bidx}_lif2_rate_per_ch"] = buf["lif2_sum"] / T_total  # (C,)
-            stats[f"block{bidx}_lif1_total"] = buf["lif1_sum"].sum().item()
-            stats[f"block{bidx}_lif2_total"] = buf["lif2_sum"].sum().item()
-        return stats
 
     def forward(self, x, return_spikes=False):
         spikes = self.encoder(x)  # (T, B, F_in)
-        mem_states = [
-            (blk.lif1.init_leaky(), blk.lif2.init_leaky()) for blk in self.blocks
-        ]
+        mem_states = [(blk.lif1.init_leaky(), blk.lif2.init_leaky()) for blk in self.blocks]
 
         logits_sum = 0.0
         spk_tbC_list = []  # 여기 모아 T×B×C_last 로 반환
 
         for t in range(self.timesteps):
-            cur = spikes[t]  # (B, T_seq, C_in)
+            cur = spikes[t]                  # (B, T_seq, C_in)
             cur = cur.transpose(1, 2).contiguous()  # (B, C_in, T_seq)
 
             for i, blk in enumerate(self.blocks):
                 last_block = (i == len(self.blocks) - 1) and return_spikes
                 if last_block:
-                    cur, m1, m2, spk2 = blk(
-                        cur, *mem_states[i], return_spk=True
-                    )  # spk2: (B,C_last,T_seq)
+                    cur, m1, m2, spk2 = blk(cur, *mem_states[i], return_spk=True)  # spk2: (B,C_last,T_seq)
                 else:
                     cur, m1, m2 = blk(cur, *mem_states[i])
                 mem_states[i] = (m1, m2)
@@ -182,7 +124,7 @@ class SpikingTCN(nn.Module):
             if return_spikes:
                 # 래스터/히스토그램 비교를 위해 conv 시간축을 이진 합성:
                 # conv 시간축 중 "한 번이라도 쏘면 1" 로 축약  => (B, C_last)
-                spk_frame = (spk2 > 0).float().mean(dim=2)
+                spk_frame = (spk2 > 0).float().mean(dim=2) 
                 spk_tbC_list.append(spk_frame)
 
         logits = logits_sum / self.timesteps

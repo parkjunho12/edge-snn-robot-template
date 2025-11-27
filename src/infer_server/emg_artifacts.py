@@ -25,9 +25,10 @@ from src.models.spiking_tcn import SpikingTCN
 # -------------------------------------------------------------------
 @dataclass
 class SNNParams:
-    hidden_dim: int = 128
+    hidden_dim: int = 256
     num_layers: int = 2
     beta: float = 0.9
+    threshold: float = 0.45
 
 
 @dataclass
@@ -42,8 +43,8 @@ class HybridParams:
     tcn_channels: Tuple[int, ...] = (64, 128, 256)
     kernel_size: int = 3
     dropout: float = 0.2
-    beta: float = 0.94
-    v_th: float = 1.0
+    beta: float = 0.95
+    threshold: float = 0.4
     timesteps: int = 20
 
 
@@ -52,8 +53,8 @@ class SpikingTCNParams:
     channels: Tuple[int, ...] = (64, 128, 256)
     kernel_size: int = 3
     dropout: float = 0.2
-    beta: float = 0.94
-    v_th: float = 1.0
+    beta: float = 0.95
+    v_th: float = 0.8
 
 
 # -------------------------------------------------------------------
@@ -63,14 +64,15 @@ def _build_snn(meta: dict, params: SNNParams, device: str) -> nn.Module:
     num_channels = int(meta["num_channels"])
     num_classes = int(meta["num_classes"])
     num_steps = int(meta.get("num_steps", 20))
+    encoding_type = meta.get("encoding_type", "rate")
 
     model = SNNClassifier(
-        num_inputs=num_channels,
+        input_size=num_channels,
         num_classes=num_classes,
-        hidden_dim=params.hidden_dim,
-        num_layers=params.num_layers,
-        timesteps=num_steps,
+        encoding_type=encoding_type,
+        num_steps=num_steps,
         beta=params.beta,
+        threshold=params.threshold,
     )
     return model.to(device)
 
@@ -80,11 +82,8 @@ def _build_tcn(meta: dict, params: TCNParams, device: str) -> nn.Module:
     num_classes = int(meta["num_classes"])
 
     model = TCNClassifier(
-        num_inputs=num_channels,
-        num_channels=list(params.channels),
+        input_size=num_channels,
         num_classes=num_classes,
-        kernel_size=params.kernel_size,
-        dropout=params.dropout,
     )
     return model.to(device)
 
@@ -93,16 +92,15 @@ def _build_hybrid(meta: dict, params: HybridParams, device: str) -> nn.Module:
     num_channels = int(meta["num_channels"])
     num_classes = int(meta["num_classes"])
     num_steps = int(meta.get("num_steps", params.timesteps))
+    encoding_type = meta.get("encoding_type", "rate")
 
     model = HybridTCNSNN(
-        num_inputs=num_channels,
-        num_channels=list(params.tcn_channels),
+        input_size=num_channels,
         num_classes=num_classes,
-        kernel_size=params.kernel_size,
-        dropout=params.dropout,
-        timesteps=num_steps,
+        encoding_type=encoding_type,
+        num_steps=num_steps,
         beta=params.beta,
-        v_th=params.v_th,
+        threshold=params.threshold,
     )
     return model.to(device)
 
@@ -122,15 +120,16 @@ def _build_spiking_tcn(meta: dict, params: SpikingTCNParams, device: str) -> nn.
         beta=params.beta,
         v_th=params.v_th,
     )
+
     return model.to(device)
 
 
 # model_name (meta["model_name"]) → (빌더 함수, default_params)
 MODEL_BUILDERS = {
-    "SNNClassifier": ( _build_snn,        SNNParams() ),
-    "TCNClassifier": ( _build_tcn,        TCNParams() ),
-    "HybridTCNSNN":  ( _build_hybrid,     HybridParams() ),
-    "SpikingTCN":    ( _build_spiking_tcn,SpikingTCNParams() ),
+    "SNNClassifier": (_build_snn, SNNParams()),
+    "TCNClassifier": (_build_tcn, TCNParams()),
+    "HybridTCNSNN": (_build_hybrid, HybridParams()),
+    "SpikingTCN": (_build_spiking_tcn, SpikingTCNParams()),
 }
 
 
@@ -242,6 +241,5 @@ def infer_single_window(
     probs_np = probs.cpu().numpy().squeeze()
 
     pred_label = label_encoder.inverse_transform([pred_idx])[0]
-    
-    
+
     return pred_idx, pred_label, conf, probs_np

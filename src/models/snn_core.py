@@ -29,14 +29,15 @@ class SpikeEncoder(nn.Module):
         # x shape: (batch_size, seq_len, features)
         batch_size, seq_len, features = x.shape
         if self.encoding_type == "delta":
-            # 1) (B,T,C) 그대로 delta에 투입
-            #    snntorch.spikegen.delta는 (B,T,C) -> (B,T,C) 형태 반환(버전에 따라 다를 수 있으니 아래 체크 권장)
-            spikes = spikegen.delta(x, threshold=0.1)  # (B,T,C)
+            spikes = spikegen.delta(x, threshold=0.2)  # (B, T_seq, C)
 
-            # 2) 시간 차원 첫 번째로: (T,B,C)
-            spikes = spikes.transpose(0, 1).contiguous()
+            # (B, T_seq, C) -> (1, B, T_seq, C)
+            spikes = spikes.unsqueeze(0)
 
-            return spikes  # (T, B, C)
+            # T_sim만큼 복제: (T_sim, B, T_seq, C)
+            spikes = spikes.repeat(self.num_steps, 1, 1, 1)
+
+            return spikes
         if self.encoding_type == "rate":
             # Rate encoding: 입력 크기에 비례하는 스파이크 확률
             # 입력을 0-1 범위로 정규화
