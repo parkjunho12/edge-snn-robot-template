@@ -6,8 +6,8 @@ Focus areas:
 
 - **Latency-aware control** (ms-level end-to-end, **target p95 < 30 ms**)
 - **Spike / energy metrics** (spike counts, firing rate, synaptic events)
-- **Edge deployment** (Jetson / x86 + Docker) *(Raspberry Pi optional)*
-- **Signal-driven control:** sEMG as primary input** (IMU optional, vision removed in v0.2s)
+- **Edge deployment** (Jetson / x86 + Docker) _(Raspberry Pi optional)_
+- **Signal-driven control:** sEMG as primary input\*\* (IMU optional, vision removed in v0.2s)
 
 ## ✨ What this repo gives you
 
@@ -20,7 +20,7 @@ Focus areas:
 You can treat this as a starting point for:
 
 - EMG-driven **robot arm / manipulator control**
-- EMG/IMU-driven mobile robots (TurtleBot, diff-drive) *(optional IMU)*
+- EMG/IMU-driven mobile robots (TurtleBot, diff-drive) _(optional IMU)_
 - Simulation-only pipelines (Gazebo, fake sensors) for algorithm work
 
 ## 🧩 Folder layout
@@ -56,8 +56,8 @@ CI:
 - Unit tests (pytest)
 - Docker build
 
-
 ## Quickstart
+
 ```bash
 # 1) clone repo
 git clone https://github.com/parkjunho12/edge-snn-robot-template.git
@@ -67,7 +67,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 3) download datasets
+# 3) Download datasets
 # ex) s1.mat is training dataset
 python scripts/download_data.py --mat s1.mat
 
@@ -75,12 +75,25 @@ python scripts/download_data.py --mat s1.mat
 python scripts/download_data.py --mat s2.mat
 python scripts/download_data.py --mat s3.mat
 
-# 4) download artifacts
+# 4) Download artifacts
 python scripts/download_data.py --artifacts
 
+# 5) Test single window(mat file) [Optional]
+python -m scripts.test_emg_model \
+  --artifact-dir ./output/rate \
+  --model-prefix spiking_tcn \
+  --sample-from-mat ./src/data/s1.mat \
+  --sample-index 100
 
+# 6) Compare models [Optional]
+python -m scripts.compare_models \
+  --artifact-dir ./output/rate \
+  --model-prefixes snn,tcn,hybrid,spiking_tcn \
+  --mat-path ./src/data/s1.mat \
+  --max-samples 200 \
+  --shuffle
 
-# 6) Run inference server (FastAPI)
+# 7) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 # Endpoints:
 #   GET  /health
@@ -88,18 +101,19 @@ uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 #   WS   /infer/stream      # sEMG windows → predictions
 #   WS   /emg/stream        # raw/processed sEMG (optional)
 
-# 7) ROS2 (optional)
+# 8) ROS2 (optional)
 source /opt/ros/humble/setup.bash
 cd ros2_ws
 colcon build --symlink-install
 
 
-# 8) Docker build (edge)
+# 9) Docker build (edge)
 docker build -t edge-snn-robot:dev deploy/
 docker compose -f deploy/docker-compose.yml up
 ```
 
 ## Architecture
+
 ```mermaid
 flowchart LR
   SENS[sEMG] --> PREPROC[notch/z-score]
@@ -114,12 +128,13 @@ flowchart LR
 ```
 
 ## Safety & Calibration
+
 - Dead-man: when RMS < rest_threshold → hold/stop
 - Velocity & acceleration clamps per joint
 - 5-min user calibration: rest → MVC (3×3s) → quick gestures → verify (>90% acc)
 
-
 ## Roadmap (6 months)
+
 - v0.1: minimal SNN control loop + metrics ([tag](https://github.com/parkjunho12/edge-snn-robot-template/releases/tag/v0.1.16))
 - v0.2: **sEMG-only input + INT8/TensorRT** (working, p95<30 ms target)
 - v0.3: edge container + dashboard (soon)
@@ -128,4 +143,5 @@ flowchart LR
 - v1.0: report + kit release (soon)
 
 ## License
+
 MIT (see `LICENSE`).
