@@ -93,7 +93,6 @@ def main():
     # 윈도우/채널 수는 모든 모델에서 같다고 가정하고 첫 모델 기준으로 사용
     first_meta = next(iter(metas.values()))
     window_size = int(first_meta["window_size"])
-    num_channels = int(first_meta["num_channels"])
 
     print(f"\n[2] Loading Ninapro .mat: {args.mat_path}")
     emg_raw, labels_raw = load_ninapro_data(args.mat_path)

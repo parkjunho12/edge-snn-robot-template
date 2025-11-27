@@ -61,6 +61,7 @@ CI:
 ```bash
 # 1) clone repo
 git clone https://github.com/parkjunho12/edge-snn-robot-template.git
+cd edge-snn-robot-template
 
 # 2) Python env
 python -m venv .venv && source .venv/bin/activate

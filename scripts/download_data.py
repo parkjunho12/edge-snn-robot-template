@@ -48,7 +48,7 @@ def download_and_extract_artifacts_zip():
     if zip_path.exists():
         print(f"[OK] Artifacts ZIP already exists → {zip_path}")
     else:
-        print(f"[Downloading] Artifacts ZIP...")
+        print("[Downloading] Artifacts ZIP...")
         urllib.request.urlretrieve(ARTIFACTS_ZIP_URL, zip_path)
         print(f"[DONE] Saved ZIP to: {zip_path}")
 
