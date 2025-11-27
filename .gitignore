@@ -73,6 +73,8 @@ runs/
 *.pth
 *.h5
 *.ckpt
+*.mat
+*.npz
 
 # --- MkDocs / Documentation build ---
 site/
@@ -158,3 +160,19 @@ deploy/.env
 
 # Cache
 *.cache/
+
+output/*.txt
+output/delta/*.png
+output/latency/*.png
+output/latency_prev/*.png
+output/rate/*.png
+output/delta/*.pth
+output/latency/*.pth
+output/latency_prev/*.pth
+output/rate/*.pth
+output/latency/*.pkl
+output/rate/*.pkl
+output/delta/*.pkl
+output/latency/*.json
+output/rate/*.json
+output/delta/*.json

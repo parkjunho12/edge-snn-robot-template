@@ -1,42 +1,72 @@
-import snntorch as snn
+from __future__ import annotations
+
 import torch
 import torch.nn as nn
-from snntorch import surrogate
-from torch import Tensor
 
-
-class TCNBlock(nn.Module):
-    def __init__(self, c_in: int, c_out: int, k: int = 3, d: int = 1) -> None:
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Conv1d(c_in, c_out, k, padding=d * (k - 1) // 2, dilation=d),
-            nn.ReLU(),
-            nn.Conv1d(c_out, c_out, k, padding=d * (k - 1) // 2, dilation=d),
-        )
-        self.res = nn.Conv1d(c_in, c_out, 1) if c_in != c_out else nn.Identity()
-        self.act = nn.ReLU()
-
-    def forward(self, x: Tensor) -> Tensor:
-        y = self.net(x) + self.res(x)
-        return self.act(y)
+from .tcn import TemporalConvNet
+from .snn_core import SpikingNeuralNetwork
 
 
 class HybridTCNSNN(nn.Module):
-    def __init__(self, c_in: int = 8, hidden: int = 32, classes: int = 3, seq: int = 64) -> None:
-        super().__init__()
-        self.tcn1 = TCNBlock(c_in, hidden, k=3, d=1)
-        self.tsn = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid())
-        self.readout = nn.Linear(hidden * seq, classes)
-        self.seq = seq
+    """TCN과 SNN을 결합한 하이브리드 모델"""
 
-    def forward(self, x: Tensor, num_steps: int = 1) -> tuple[Tensor, Tensor]:
-        # x: [B, C, T]
-        h = self.tcn1(x)
-        spk_seq = []
-        mem = torch.zeros_like(h)
-        for _ in range(num_steps):
-            spk, mem = self.tsn(h, mem)
-            spk_seq.append(spk)
-        s = torch.stack(spk_seq).mean(0)  # [B, hidden, T]
-        z = self.readout(s.flatten(1))
-        return z, s
+    def __init__(
+        self,
+        input_size,
+        num_classes,
+        tcn_channels=[64, 128, 256],
+        snn_hidden_sizes=[64, 128, 256],
+        num_steps=10,
+        kernel_size=3,
+        dropout=0.2,
+        encoding_type="rate",
+        beta=0.9,
+        threshold=1.0,
+    ):
+        super(HybridTCNSNN, self).__init__()
+
+        self.num_steps = num_steps
+
+        # TCN branch
+        self.tcn = TemporalConvNet(input_size, tcn_channels, kernel_size, dropout)
+
+        # SNN branch
+        self.snn = SpikingNeuralNetwork(
+            input_size,
+            snn_hidden_sizes,
+            num_steps=num_steps,
+            beta=beta,
+            encoding_type=encoding_type,
+            threshold=threshold,
+        )
+
+        # Feature fusion
+        combined_size = tcn_channels[-1] + snn_hidden_sizes[-1]
+        self.fusion = nn.Sequential(
+            nn.Linear(combined_size, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.BatchNorm1d(128),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout / 2),
+            nn.Linear(64, num_classes),
+        )
+
+    def forward(self, x):
+        # TCN branch
+        tcn_out = self.tcn(x)
+        # print(tcn_out.shape)
+        tcn_pooled = tcn_out.mean(dim=1)  # Global average pooling
+
+        # SNN branch
+        snn_spikes = self.snn(x)
+        # print(snn_spikes.shape)
+        snn_rates = snn_spikes.mean(dim=0)
+
+        # Combine features
+        combined = torch.cat([tcn_pooled, snn_rates], dim=1)
+
+        # Final classification
+        output = self.fusion(combined)
+        return output

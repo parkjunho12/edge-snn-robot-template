@@ -14,3 +14,7 @@ psutil
 opencv-python
 pytest
 flake8
+pyserial>=3.5
+pydantic-settings>=2.0.0
+joblib
+scikit-learn
