@@ -65,14 +65,16 @@ def _build_snn(meta: dict, params: SNNParams, device: str) -> nn.Module:
     num_classes = int(meta["num_classes"])
     num_steps = int(meta.get("num_steps", 20))
     encoding_type = meta.get("encoding_type", "rate")
+    beta = float(meta.get("beta", params.beta))
+    threshold = float(meta.get("threshold", params.threshold))
 
     model = SNNClassifier(
         input_size=num_channels,
         num_classes=num_classes,
         encoding_type=encoding_type,
         num_steps=num_steps,
-        beta=params.beta,
-        threshold=params.threshold,
+        beta=beta,
+        threshold=threshold,
     )
     return model.to(device)
 
@@ -93,14 +95,16 @@ def _build_hybrid(meta: dict, params: HybridParams, device: str) -> nn.Module:
     num_classes = int(meta["num_classes"])
     num_steps = int(meta.get("num_steps", params.timesteps))
     encoding_type = meta.get("encoding_type", "rate")
+    beta = float(meta.get("beta", params.beta))
+    threshold = float(meta.get("threshold", params.threshold))
 
     model = HybridTCNSNN(
         input_size=num_channels,
         num_classes=num_classes,
         encoding_type=encoding_type,
         num_steps=num_steps,
-        beta=params.beta,
-        threshold=params.threshold,
+        beta=beta,
+        threshold=threshold,
     )
     return model.to(device)
 
@@ -109,6 +113,8 @@ def _build_spiking_tcn(meta: dict, params: SpikingTCNParams, device: str) -> nn.
     num_channels = int(meta["num_channels"])
     num_classes = int(meta["num_classes"])
     num_steps = int(meta.get("num_steps", 20))
+    beta = float(meta.get("beta", params.beta))
+    v_th = float(meta.get("v_th", params.v_th))
 
     model = SpikingTCN(
         num_inputs=num_channels,
@@ -117,8 +123,8 @@ def _build_spiking_tcn(meta: dict, params: SpikingTCNParams, device: str) -> nn.
         kernel_size=params.kernel_size,
         dropout=params.dropout,
         timesteps=num_steps,
-        beta=params.beta,
-        v_th=params.v_th,
+        beta=beta,
+        v_th=v_th,
     )
 
     return model.to(device)
