@@ -7,21 +7,17 @@ from pathlib import Path
 # ====== 경로 설정 ======
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "src" / "data"
-OUTPUT_DIR = PROJECT_ROOT / "output"    # encoding_type 하위 디렉토리로 아티팩트 저장
-DOWNLOADS_DIR = PROJECT_ROOT / "downloads"         # zip, 임시 파일 저장용
+OUTPUT_DIR = PROJECT_ROOT  # encoding_type 하위 디렉토리로 아티팩트 저장
+DOWNLOADS_DIR = PROJECT_ROOT / "downloads"  # zip, 임시 파일 저장용
 
 # ====== GitHub Release / 외부 URL 설정 ======
 # 1) 아티팩트(zip) URL: .pth, .pkl, .json 등만 포함된 zip
-ARTIFACTS_ZIP_URL = (
-    "https://github.com/parkjunho12/edge-snn-robot-template/releases/download/v0.1.16/output.zip"
-)
+ARTIFACTS_ZIP_URL = "https://github.com/parkjunho12/edge-snn-robot-template/releases/download/v0.1.16/output.zip"
 ARTIFACTS_ZIP_NAME = "emg_artifacts_rate.zip"
 
 # 2) mat 파일용 베이스 URL (형태 예시)
 #   → mat 이름만 바꿔서 다양한 파일 받기: S1_D1_T1.mat, S2_D1_T1.mat 등
-MAT_BASE_URL = (
-    "https://github.com/parkjunho12/edge-snn-robot-template/releases/download/v0.1.16/{mat_name}"
-)
+MAT_BASE_URL = "https://github.com/parkjunho12/edge-snn-robot-template/releases/download/v0.1.16/{mat_name}"
 # 필요하면 나중에 HuggingFace, S3 주소 등으로 바꿀 수 있음
 
 
@@ -57,7 +53,7 @@ def download_and_extract_artifacts_zip():
         print(f"[DONE] Saved ZIP to: {zip_path}")
 
     # 압축 해제
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
     print(f"[Extracting] {zip_path} → {OUTPUT_DIR}")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(OUTPUT_DIR)

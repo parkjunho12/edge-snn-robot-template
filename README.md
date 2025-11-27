@@ -67,10 +67,20 @@ python -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 3) create datasets
-mkdir -p src/data
+# 3) download datasets
+# ex) s1.mat is training dataset
+python scripts/download_data.py --mat s1.mat
 
-# 3) Run inference server (FastAPI)
+# s2, s3.mat can download too
+python scripts/download_data.py --mat s2.mat
+python scripts/download_data.py --mat s3.mat
+
+# 4) download artifacts
+python scripts/download_data.py --artifacts
+
+
+
+# 6) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 # Endpoints:
 #   GET  /health
@@ -78,13 +88,13 @@ uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 #   WS   /infer/stream      # sEMG windows → predictions
 #   WS   /emg/stream        # raw/processed sEMG (optional)
 
-# 4) ROS2 (optional)
+# 7) ROS2 (optional)
 source /opt/ros/humble/setup.bash
 cd ros2_ws
 colcon build --symlink-install
 
 
-# 5) Docker build (edge)
+# 8) Docker build (edge)
 docker build -t edge-snn-robot:dev deploy/
 docker compose -f deploy/docker-compose.yml up
 ```
