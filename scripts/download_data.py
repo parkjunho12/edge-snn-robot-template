@@ -62,6 +62,17 @@ def download_and_extract_artifacts_zip():
     print("\n[INFO] Extracted artifact files:")
     for p in OUTPUT_DIR.glob("*"):
         print("  →", p.name)
+        
+    # macOS 잔여 폴더 제거
+    macos_junk = OUTPUT_DIR / "__MACOSX"
+    if macos_junk.exists():
+        import shutil
+        shutil.rmtree(macos_junk)
+        print("[CLEAN] Removed __MACOSX folder.")
+    
+    for junk in OUTPUT_DIR.glob(".DS_Store"):
+        junk.unlink()
+        print("[CLEAN] Removed .DS_Store file.")
 
 
 def download_mat_file(mat_name: str):
