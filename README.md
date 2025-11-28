@@ -61,6 +61,7 @@ CI:
 ```bash
 # 1) clone repo
 git clone https://github.com/parkjunho12/edge-snn-robot-template.git
+cd edge-snn-robot-template
 
 # 2) Python env
 python -m venv .venv && source .venv/bin/activate
@@ -93,7 +94,23 @@ python -m scripts.compare_models \
   --max-samples 200 \
   --shuffle
 
-# 7) Run inference server (FastAPI)
+# 7) Export onnx and compare with pytorch
+python -m scripts.export_onnx_emg_models \
+  --artifact-dir ./output/{encoding_type} \
+  --model-prefixes snn,tcn,hybrid,spiking_tcn --sample-from-mat ./src/data/s1.mat \
+  --sample-index 124
+
+# 8) Validate onnx (Optional)
+python -m scripts.onnx_model_eval \       
+  --artifact-dir ./output/{encoding_type} \  
+  --model-prefix spiking_tcn \                                                     
+  --mat-path ./src/data/s1.mat \
+  --val-ratio 0.2 \
+  --batch-size 64 \
+  --max-samples 5000
+
+
+# 9) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 # Endpoints:
 #   GET  /health
@@ -101,13 +118,13 @@ uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 #   WS   /infer/stream      # sEMG windows → predictions
 #   WS   /emg/stream        # raw/processed sEMG (optional)
 
-# 8) ROS2 (optional)
+# 10) ROS2 (optional)
 source /opt/ros/humble/setup.bash
 cd ros2_ws
 colcon build --symlink-install
 
 
-# 9) Docker build (edge)
+# 11) Docker build (edge)
 docker build -t edge-snn-robot:dev deploy/
 docker compose -f deploy/docker-compose.yml up
 ```
