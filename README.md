@@ -156,7 +156,7 @@ flowchart LR
 ## Roadmap (6 months)
 
 - v0.1: minimal SNN control loop + metrics ([tag](https://github.com/parkjunho12/edge-snn-robot-template/releases/tag/v0.1.16))
-- v0.2: **sEMG-only input + INT8/TensorRT** (working)
+- v0.2: **sEMG-only input + INT8/TensorRT**   (working)
 - v0.3: edge container + dashboard (soon)
 - v0.4: Hybrid TCN–SNN ablation/results (soon)
 - v0.5: robustness + fail-safe (soon)
