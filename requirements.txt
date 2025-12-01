@@ -18,3 +18,4 @@ pyserial>=3.5
 pydantic-settings>=2.0.0
 joblib
 scikit-learn
+onnxscript
