@@ -256,7 +256,7 @@ def main():
             do_constant_folding=True,
             input_names=["emg"],
             output_names=["logits"],
-            dynamic_axes={
+            dynamic_shapes={
                 "emg": {0: "batch_size", 1: "time_steps"},
                 "logits": {0: "batch_size"},
             },
