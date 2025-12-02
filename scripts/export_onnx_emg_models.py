@@ -256,12 +256,11 @@ def main():
             do_constant_folding=True,
             input_names=["emg"],
             output_names=["logits"],
-            dynamic_shapes=(
-                {  # 첫 번째 인자 x에 대한 동적 차원
-                    0: torch.export.Dim("batch"),
-                    2: torch.export.Dim("time"),
-                },
-            ),
+            dynamic_axes={
+                "emg": {0: "batch_size", 1: "time_steps"},
+                "logits": {0: "batch_size"},
+            },
+            dynamo=False
         )
         print("    ✅ ONNX export done")
         print(f"    - Verifying ONNX export...")
