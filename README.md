@@ -144,15 +144,6 @@ flowchart LR
 
 - ### ([v0.2](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_2)): **sEMG-only input + INT8/TensorRT**   (working)
 
-Only the TCN-based sEMG classifier currently supports full ONNX → TensorRT INT8 deployment.  
-Latency target (p95 < 30 ms) has been met successfully.
-
-**INT8 TensorRT Latency (batch=1):**
-- p50: 0.131 ms
-- p95: 0.135 ms
-- p99: 0.140 ms
-- max: 0.184 ms
-
 ✓ Requirement: p95 < 30 ms → PASSED  
 ✗ Hybrid/SNN models: ONNX/TensorRT export pending, Spikegen encoding problem
 
