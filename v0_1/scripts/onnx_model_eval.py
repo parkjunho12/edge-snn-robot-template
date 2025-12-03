@@ -2,14 +2,14 @@
 """
 onnx_model_eval.py
 
-ONNX EMG 모델 평가 스크립트.
+ONNX EMG Eval scripts
 
 - NinaPro DB6 .mat 파일에서 EMG/레이블 로드
 - 윈도우 생성 (preprocess_data_for_networks와 동일한 방식)
 - 스케일링 + ONNX 추론
 - accuracy / confusion matrix / per-class recall 출력
 
-사용 예:
+Example :
 
     python -m scripts.onnx_model_eval \
         --artifact-dir ./output/rate \
