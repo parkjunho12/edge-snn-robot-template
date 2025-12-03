@@ -1,6 +1,8 @@
 """
 TensorRT Runtime for EMG Model Inference
 Loads .plan engine file and performs inference on EMG data
+
+Supports TensorRT 8.x, 9.x, and 10.x with automatic API version detection
 """
 
 import argparse
@@ -15,6 +17,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Detect TensorRT version
+TRT_VERSION = trt.__version__
+TRT_MAJOR = int(TRT_VERSION.split('.')[0])
+logger.info(f"TensorRT version: {TRT_VERSION} (major: {TRT_MAJOR})")
+
+# Version-specific compatibility flags
+USE_V2_API = TRT_MAJOR >= 10  # TensorRT 10+ uses new binding API
+SUPPORT_TENSORS = TRT_MAJOR >= 10  # TensorRT 10+ supports tensor I/O
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -50,6 +60,11 @@ class TRTRuntime:
         self.engine = None
         self.context = None
         
+        # TensorRT version info
+        self.trt_version = TRT_VERSION
+        self.trt_major = TRT_MAJOR
+        self.use_v2_api = USE_V2_API
+        
         # Memory buffers
         self.inputs = []
         self.outputs = []
@@ -61,10 +76,19 @@ class TRTRuntime:
         self.output_shapes = {}
         self.input_dtypes = {}
         self.output_dtypes = {}
+        self.input_names = []
+        self.output_names = []
+        
+        # TensorRT 10+ specific
+        self.tensor_names = []
+        self.input_tensors = {}
+        self.output_tensors = {}
         
         # Load engine
         self._load_engine()
         self._allocate_buffers()
+        
+        logger.info(f"TensorRT runtime initialized (v{self.trt_version}, API v{'2' if self.use_v2_api else '1'})")
         
     def _load_engine(self):
         """Load serialized engine from file"""
@@ -87,13 +111,30 @@ class TRTRuntime:
         self.context = self.engine.create_execution_context()
         
         logger.info(f"Engine loaded successfully")
-        logger.info(f"Number of bindings: {self.engine.num_bindings}")
+        num_bindings = getattr(self.engine, "num_bindings", None)
+        if num_bindings is None:
+            num_bindings = self.engine.num_io_tensors
+            
+        self.num_bindings = num_bindings
+        
+        logger.info(f"Number of bindings: {self.num_bindings}")
         
     def _allocate_buffers(self):
         """Allocate GPU memory buffers for inputs and outputs"""
         self.stream = cuda.Stream()
         
-        for i in range(self.engine.num_bindings):
+        if self.use_v2_api:
+            # TensorRT 10+ uses new tensor I/O API
+            logger.info("Using TensorRT 10+ tensor I/O API")
+            self._allocate_buffers_v10()
+        else:
+            # TensorRT 8.x/9.x uses binding API
+            logger.info("Using TensorRT 8.x/9.x binding API")
+            self._allocate_buffers_v8()
+    
+    def _allocate_buffers_v8(self):
+        """Allocate buffers for TensorRT 8.x/9.x (legacy binding API)"""
+        for i in range(self.num_bindings):
             binding_name = self.engine.get_binding_name(i)
             dtype = trt.nptype(self.engine.get_binding_dtype(i))
             shape = self.engine.get_binding_shape(i)
@@ -105,9 +146,11 @@ class TRTRuntime:
             if is_input:
                 self.input_shapes[binding_name] = shape
                 self.input_dtypes[binding_name] = dtype
+                self.input_names.append(binding_name)
             else:
                 self.output_shapes[binding_name] = shape
                 self.output_dtypes[binding_name] = dtype
+                self.output_names.append(binding_name)
             
             # For dynamic shapes, we'll allocate later based on actual input
             if -1 in shape:
@@ -130,6 +173,53 @@ class TRTRuntime:
                 else:
                     self.outputs.append({'host': host_mem, 'device': device_mem})
     
+    def _allocate_buffers_v10(self):
+        """Allocate buffers for TensorRT 10+ (new tensor I/O API)"""
+        # Get all tensor names
+        for i in range(self.engine.num_io_tensors):
+            tensor_name = self.engine.get_tensor_name(i)
+            self.tensor_names.append(tensor_name)
+            
+            # Get tensor properties
+            try:
+                dtype = trt.nptype(self.engine.get_tensor_dtype(tensor_name))
+                shape = self.engine.get_tensor_shape(tensor_name)
+                mode = self.engine.get_tensor_mode(tensor_name)
+                
+                is_input = (mode == trt.TensorIOMode.INPUT)
+                
+                logger.info(f"Tensor {i}: {tensor_name}, shape={shape}, dtype={dtype}, mode={mode}")
+                
+                if is_input:
+                    self.input_shapes[tensor_name] = shape
+                    self.input_dtypes[tensor_name] = dtype
+                    self.input_names.append(tensor_name)
+                else:
+                    self.output_shapes[tensor_name] = shape
+                    self.output_dtypes[tensor_name] = dtype
+                    self.output_names.append(tensor_name)
+                
+                # For dynamic shapes, allocate later
+                if -1 in shape:
+                    logger.info(f"Dynamic shape detected for {tensor_name}, will allocate on first inference")
+                    if is_input:
+                        self.input_tensors[tensor_name] = None
+                    else:
+                        self.output_tensors[tensor_name] = None
+                else:
+                    # Allocate memory
+                    size = np.prod(shape)
+                    host_mem = cuda.pagelocked_empty(int(size), dtype)
+                    device_mem = cuda.mem_alloc(host_mem.nbytes)
+                    
+                    if is_input:
+                        self.input_tensors[tensor_name] = {'host': host_mem, 'device': device_mem}
+                    else:
+                        self.output_tensors[tensor_name] = {'host': host_mem, 'device': device_mem}
+                        
+            except Exception as e:
+                logger.warning(f"Error processing tensor {tensor_name}: {e}")
+    
     def _allocate_dynamic_buffers(self, input_data: np.ndarray, input_name: str = 'emg'):
         """Allocate buffers for dynamic shapes based on actual input"""
         input_shape = input_data.shape
@@ -149,7 +239,7 @@ class TRTRuntime:
             self.bindings[binding_idx] = int(device_mem)
         
         # Allocate output buffers based on inferred shapes
-        for i in range(self.engine.num_bindings):
+        for i in range(self.num_bindings):
             if not self.engine.binding_is_input(i) and self.outputs[i] is None:
                 output_shape = self.context.get_binding_shape(i)
                 output_name = self.engine.get_binding_name(i)
@@ -176,6 +266,13 @@ class TRTRuntime:
         Returns:
             Output numpy array
         """
+        if self.use_v2_api:
+            return self._infer_v10(input_data, input_name)
+        else:
+            return self._infer_v8(input_data, input_name)
+    
+    def _infer_v8(self, input_data: np.ndarray, input_name: str = 'emg') -> np.ndarray:
+        """Inference for TensorRT 8.x/9.x using binding API"""
         # Ensure input is the correct dtype
         input_binding_idx = self.engine.get_binding_index(input_name)
         expected_dtype = self.input_dtypes[input_name]
@@ -219,12 +316,85 @@ class TRTRuntime:
         self.stream.synchronize()
         
         # Get output shape
-        output_binding_idx = self.engine.num_bindings - 1  # Assuming last binding is output
+        output_binding_idx = self.num_bindings - 1  # Assuming last binding is output
         output_shape = self.context.get_binding_shape(output_binding_idx)
         output_name = self.engine.get_binding_name(output_binding_idx)
         
         # Reshape output
         output_data = self.outputs[output_binding_idx]['host'].reshape(output_shape)
+        
+        return output_data.copy()
+    
+    def _infer_v10(self, input_data: np.ndarray, input_name: str = 'emg') -> np.ndarray:
+        """Inference for TensorRT 10+ using tensor I/O API"""
+        # Ensure input is the correct dtype
+        expected_dtype = self.input_dtypes[input_name]
+        
+        if input_data.dtype != expected_dtype:
+            input_data = input_data.astype(expected_dtype)
+        
+        input_shape = tuple(input_data.shape)
+        
+        # Set input shape for dynamic dimensions
+        if -1 in self.input_shapes[input_name]:
+            self.context.set_input_shape(input_name, input_shape)
+        
+        # Allocate input buffer if needed
+        if input_name not in self.input_tensors or self.input_tensors[input_name] is None:
+            size = np.prod(input_shape)
+            host_mem = cuda.pagelocked_empty(int(size), expected_dtype)
+            device_mem = cuda.mem_alloc(host_mem.nbytes)
+            self.input_tensors[input_name] = {'host': host_mem, 'device': device_mem}
+        
+        # Copy input data to host buffer
+        input_data_flat = input_data.ravel()
+        np.copyto(self.input_tensors[input_name]['host'], input_data_flat)
+        
+        # Transfer input data to GPU
+        cuda.memcpy_htod_async(
+            self.input_tensors[input_name]['device'],
+            self.input_tensors[input_name]['host'],
+            self.stream
+        )
+        
+        # Set tensor address
+        self.context.set_tensor_address(input_name, int(self.input_tensors[input_name]['device']))
+        
+        # Allocate output buffers based on inferred shapes
+        for output_name in self.output_names:
+            output_shape = self.context.get_tensor_shape(output_name)
+            
+            if output_name not in self.output_tensors or self.output_tensors[output_name] is None:
+                if -1 not in output_shape:
+                    size = np.prod(output_shape)
+                    dtype = self.output_dtypes[output_name]
+                    host_mem = cuda.pagelocked_empty(int(size), dtype)
+                    device_mem = cuda.mem_alloc(host_mem.nbytes)
+                    self.output_tensors[output_name] = {'host': host_mem, 'device': device_mem}
+                    logger.info(f"Allocated output buffer for {output_name}: shape={output_shape}")
+            
+            # Set output tensor address
+            if output_name in self.output_tensors and self.output_tensors[output_name] is not None:
+                self.context.set_tensor_address(output_name, int(self.output_tensors[output_name]['device']))
+        
+        # Execute inference
+        self.context.execute_async_v3(stream_handle=self.stream.handle)
+        
+        # Transfer output data from GPU
+        output_name = self.output_names[0]  # Get first output
+        output_shape = self.context.get_tensor_shape(output_name)
+        
+        cuda.memcpy_dtoh_async(
+            self.output_tensors[output_name]['host'],
+            self.output_tensors[output_name]['device'],
+            self.stream
+        )
+        
+        # Synchronize stream
+        self.stream.synchronize()
+        
+        # Reshape and return output
+        output_data = self.output_tensors[output_name]['host'].reshape(output_shape)
         
         return output_data.copy()
     
@@ -330,25 +500,39 @@ class TRTRuntime:
     
     def __del__(self):
         """Clean up resources"""
-        # Free GPU memory
-        for inp in self.inputs:
-            if inp and inp['device']:
-                inp['device'].free()
-        
-        for out in self.outputs:
-            if out and out['device']:
-                out['device'].free()
-        
-        logger.info("TensorRT runtime cleaned up")
+        try:
+            # Free GPU memory for legacy API
+            for inp in self.inputs:
+                if inp and 'device' in inp and inp['device']:
+                    inp['device'].free()
+            
+            for out in self.outputs:
+                if out and 'device' in out and out['device']:
+                    out['device'].free()
+            
+            # Free GPU memory for tensor API (TensorRT 10+)
+            if hasattr(self, 'input_tensors'):
+                for tensor in self.input_tensors.values():
+                    if tensor and 'device' in tensor and tensor['device']:
+                        tensor['device'].free()
+            
+            if hasattr(self, 'output_tensors'):
+                for tensor in self.output_tensors.values():
+                    if tensor and 'device' in tensor and tensor['device']:
+                        tensor['device'].free()
+            
+            logger.info("TensorRT runtime cleaned up")
+        except Exception as e:
+            logger.warning(f"Error during cleanup: {e}")
 
 
 def main():
     """Example usage"""
     # Path to engine file
-    engine_path = "output/rate/model_tcn_fp16.plan"
     args = parse_args()
     # Initialize runtime
     runtime = TRTRuntime(args.engine_path)
+    
     
     # Print input/output info
     print(f"Input shapes: {runtime.input_shapes}")
