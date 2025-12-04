@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from src.config import Settings, build_ninapro_cfg
 from src.emg_io.emg_stream import EMGMode, get_emg_stream
 from src.models.hybrid_tcnsnn import HybridTCNSNN
+from src.infer_server.runtime_trt import TRTRuntime
 
 from src.infer_server.emg_artifacts import (
     load_emg_model,
@@ -34,6 +35,14 @@ window_size = int(meta["window_size"])
 num_channels = int(meta["num_channels"])
 batch_size = 1
 # TensorRT runtime (for optimized inference)
+trt_runtime: Optional[TRTRuntime] = None
+try:
+    trt_runtime = TRTRuntime("output/rate/model_tcn_fp16.plan")
+    trt_runtime.warmup(input_shape=(batch_size, window_size, num_channels), num_iterations=10)
+    print("✓ TensorRT runtime loaded successfully")
+except Exception as e:
+    print(f"⚠ TensorRT runtime not available: {e}")
+    print("  Falling back to PyTorch inference")
 
 # EMG stream setup
 if settings.emg_mode == EMGMode.NINAPRO:
@@ -113,6 +122,35 @@ def infer(inp: InferInput) -> dict[str, str]:
     }
 
 
+@app.post("/infer/tensorrt")
+def infer_tensorrt(inp: InferenceInput) -> dict[str, str]:
+    """Single inference with TensorRT runtime"""
+    if trt_runtime is None:
+        raise HTTPException(status_code=503, detail="TensorRT runtime not available")
+    
+    # Create dummy input matching TensorRT expected shape [batch, sequence, channels]
+   
+    input_shape = (inp.batch, inp.length, inp.channels)
+    x = np.random.randn(*input_shape).astype(np.float32)
+    
+    t0 = time.perf_counter()
+    output = trt_runtime.infer(x)
+    dt = (time.perf_counter() - t0) * 1000.0
+    
+    # Get prediction
+    prediction = int(np.argmax(output))
+    confidence = float(np.max(output))
+    
+    return {
+        "latency_ms": str(dt),
+        "prediction": str(prediction),
+        "confidence": str(confidence),
+        "cpu_percent": str(psutil.cpu_percent(interval=None)),
+        "shape": str(list(output.shape)),
+        "backend": "tensorrt"
+    }
+
+
 async def emg_stream_generator(
     config: StreamConfig
 ) -> AsyncGenerator[str, None]:
@@ -153,18 +191,30 @@ async def emg_stream_generator(
             # Run inference
             inference_start = time.perf_counter()
             
-            # PyTorch inference
-                # Convert to torch tensor: [batch, channels, sequence_length]
-            emg_tensor = torch.from_numpy(emg_normalized).float()
-            emg_tensor = emg_tensor.transpose(0, 1).unsqueeze(0)  # [1, channels, sequence_length]
-                
-            with torch.inference_mode():
-                z, s = model(emg_tensor, num_steps=1)
+            if use_trt:
+                # TensorRT inference
+                # Add batch dimension: [1, sequence_length, channels]
+                emg_batch = np.expand_dims(emg_normalized, axis=0).astype(np.float32)
+                output = trt_runtime.infer(emg_batch)
                 
                 # Get prediction
-            prediction = int(torch.argmax(z, dim=-1).item())
-            confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
-            output_shape = list(z.shape)
+                prediction = int(np.argmax(output))
+                confidence = float(np.max(output))
+                output_shape = list(output.shape)
+                
+            else:
+                # PyTorch inference
+                # Convert to torch tensor: [batch, channels, sequence_length]
+                emg_tensor = torch.from_numpy(emg_normalized).float()
+                emg_tensor = emg_tensor.transpose(0, 1).unsqueeze(0)  # [1, channels, sequence_length]
+                
+                with torch.inference_mode():
+                    z, s = model(emg_tensor, num_steps=1)
+                
+                # Get prediction
+                prediction = int(torch.argmax(z, dim=-1).item())
+                confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
+                output_shape = list(z.shape)
             
             inference_time = (time.perf_counter() - inference_start) * 1000.0
             

@@ -30,6 +30,11 @@ RUN python -m pip install --upgrade pip && \
 
 # 앱 소스 복사
 COPY src /lab/src
+COPY scripts /lab/scripts
+
+RUN python scripts/download_data.py --mat s1.mat
+
+RUN python scripts/download_data.py --artifacts
 
 # 기본 포트
 EXPOSE 8000

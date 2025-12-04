@@ -112,7 +112,7 @@ colcon build --symlink-install
 
 
 # 11) Docker build (edge)
-docker build -t edge-snn-robot:dev deploy/
+docker build -t edge-snn-robot:dev .
 docker compose -f deploy/docker-compose.yml up
 ```
 
