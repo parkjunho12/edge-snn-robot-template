@@ -22,16 +22,23 @@ from src.infer_server.emg_artifacts import (
 )
 
 settings = Settings()
+settings.ninapro_path = "../data/s1.mat"
 app = FastAPI(title="Edge SNN Robot Dashboard")
 
 # PyTorch model (original)
-model = HybridTCNSNN(input_size=16, num_classes=7)
 
+artifact_dir = Path("./output/rate")
+model, scaler, label_encoder, meta = load_emg_model(
+        artifact_dir, prefix="tcn", device="cpu"
+)
+window_size = int(meta["window_size"])
+num_channels = int(meta["num_channels"])
+batch_size = 1
 # TensorRT runtime (for optimized inference)
 trt_runtime: Optional[TRTRuntime] = None
 try:
     trt_runtime = TRTRuntime("output/rate/model_tcn_fp16.plan")
-    trt_runtime.warmup(input_shape=(1, 200, 16), num_iterations=10)
+    trt_runtime.warmup(input_shape=(batch_size, window_size, num_channels), num_iterations=10)
     print("✓ TensorRT runtime loaded successfully")
 except Exception as e:
     print(f"⚠ TensorRT runtime not available: {e}")
@@ -95,12 +102,7 @@ def health() -> dict[str, str]:
 @app.post("/infer")
 def infer(inp: InferInput) -> dict[str, str]:
     """Single inference with PyTorch model"""
-    artifact_dir = Path(f"./output/{inp.encoding_type}")
-    model, scaler, label_encoder, meta = load_emg_model(
-        artifact_dir, prefix=inp.model_prefix, device=inp.device
-    )
-    window_size = int(meta["window_size"])
-    num_channels = int(meta["num_channels"])
+
     emg_window = None
     emg_window = np.random.randn(window_size, num_channels).astype(np.float32)
     print(f"    - Dummy EMG shape: {emg_window.shape}")

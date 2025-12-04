@@ -8,10 +8,10 @@ from src.emg_io.data_src.ninapro import NinaProConfig
 
 
 class Settings(BaseSettings):
-    emg_mode: EMGMode = EMGMode.DUMMY
+    emg_mode: EMGMode = EMGMode.NINAPRO
     emg_port: str | None = None
     emg_win: int = 200
-    emg_ch: int = 8
+    emg_ch: int = 16
     emg_fs: int = 2000
 
     ninapro_path: Path | None = None
