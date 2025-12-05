@@ -39,6 +39,8 @@ class NinaProEMGStream(EMGStream):
         self.cfg = cfg
         self.realtime = realtime
         self._windows: Optional[NinaProWindows] = None
+        self._lazy_load()
+        
 
     def _lazy_load(self) -> NinaProWindows:
         if self._windows is None:
@@ -112,7 +114,7 @@ class DummyEMGStream:
     def __init__(
         self,
         win: int = 200,
-        ch: int = 8,
+        ch: int = 16,
         fs: int = 2000,
         realtime: bool = False,
     ) -> None:
@@ -145,5 +147,6 @@ def get_emg_stream(mode: EMGMode, **kwargs) -> EMGStream:
         return RealtimeEMGStream(**kwargs)
     if mode == EMGMode.NINAPRO:
         ninapro_cfg = kwargs["ninapro_cfg"]
+        print("Creating NinaPro EMG stream with config:", ninapro_cfg)
         return NinaProEMGStream(ninapro_cfg, realtime=kwargs.get("realtime", True))
     raise ValueError(f"Unknown EMG mode: {mode}")

@@ -36,6 +36,7 @@ def load_ninapro_mat(cfg: NinaProConfig) -> NinaProWindows:
         - raw shape [time, ch]
         - windowed shape [N, win, ch]
     """
+    print(f"[NinaPro] Loading .mat from: {cfg.path}")
     data = loadmat(cfg.path)
 
     if cfg.key not in data:
