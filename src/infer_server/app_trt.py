@@ -3,15 +3,17 @@ import asyncio
 from typing import Optional, AsyncGenerator
 from pathlib import Path
 
+import json
 import psutil
 import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import Settings, build_ninapro_cfg
-from src.emg_io.emg_stream import EMGMode, get_emg_stream
+from src.emg_io.emg_stream import EMGMode, get_emg_stream, EMGStream
 from src.models.hybrid_tcnsnn import HybridTCNSNN
 from src.infer_server.runtime_trt import TRTRuntime
 
@@ -22,9 +24,19 @@ from src.infer_server.emg_artifacts import (
 )
 
 settings = Settings()
-settings.ninapro_path = "../data/s1.mat"
+settings.ninapro_path = "./src/data/s1.mat"
 app = FastAPI(title="Edge SNN Robot Dashboard")
 
+origins = ["*"]  # 또는 ["http://localhost:5500", "http://127.0.0.1:5500"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],      # POST, GET, OPTIONS 등 모두 허용
+    allow_headers=["*"],      # Content-Type 같은 헤더 허용
+)
+    
 # PyTorch model (original)
 
 artifact_dir = Path("./output/rate")
@@ -34,7 +46,7 @@ model, scaler, label_encoder, meta = load_emg_model(
 window_size = int(meta["window_size"])
 num_channels = int(meta["num_channels"])
 batch_size = 1
-# TensorRT runtime (for optimized inference)
+
 trt_runtime: Optional[TRTRuntime] = None
 try:
     trt_runtime = TRTRuntime("output/rate/model_tcn_fp16.plan")
@@ -43,23 +55,32 @@ try:
 except Exception as e:
     print(f"⚠ TensorRT runtime not available: {e}")
     print("  Falling back to PyTorch inference")
+# TensorRT runtime (for optimized inference)
+current_emg_mode: EMGMode = settings.emg_mode
 
-# EMG stream setup
-if settings.emg_mode == EMGMode.NINAPRO:
-    ninapro_cfg = build_ninapro_cfg(settings)
-    emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
-elif settings.emg_mode == EMGMode.REALTIME:
-    emg_stream = get_emg_stream(
-        EMGMode.REALTIME,
-        port=settings.emg_port,
-        win=settings.emg_win,
-        ch=settings.emg_ch,
-        fs=settings.emg_fs,
-    )
-else:
-    emg_stream = get_emg_stream(
-        EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs
-    )
+ninapro_cfg = build_ninapro_cfg(settings)
+ninapro_emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
+
+def build_emg_stream(mode: EMGMode, settings: Settings) -> EMGStream:
+    if settings.emg_mode == EMGMode.NINAPRO:
+        print("Using NINAPRO EMG stream")
+        emg_stream = ninapro_emg_stream
+    elif settings.emg_mode == EMGMode.REALTIME:
+        emg_stream = get_emg_stream(
+            EMGMode.REALTIME,
+            port=settings.emg_port,
+            win=settings.emg_win,
+            ch=settings.emg_ch,
+            fs=settings.emg_fs,
+        )
+    else:
+        print("Using DUMMY EMG stream")
+        emg_stream = get_emg_stream(
+            EMGMode.DUMMY, win=settings.emg_win, ch=settings.emg_ch, fs=settings.emg_fs
+        )
+    return emg_stream
+
+emg_stream: EMGStream = build_emg_stream(current_emg_mode, settings)
 
 
 class InferenceInput(BaseModel):
@@ -74,11 +95,11 @@ class InferInput(BaseModel):
 
 
 class StreamConfig(BaseModel):
-    duration_seconds: Optional[float] = None  # None = infinite stream
-    use_tensorrt: bool = True
+    duration_seconds: Optional[float] = 10  # None = infinite stream
+    use_tensorrt: bool = False
     fps: int = 30  # Frames per second
     preprocess: bool = True  # Apply normalization
-
+    emg_mode: EMGMode | None = EMGMode.DUMMY  # Optional EMG mode override
 
 class StreamResponse(BaseModel):
     timestamp: float
@@ -122,35 +143,6 @@ def infer(inp: InferInput) -> dict[str, str]:
     }
 
 
-@app.post("/infer/tensorrt")
-def infer_tensorrt(inp: InferenceInput) -> dict[str, str]:
-    """Single inference with TensorRT runtime"""
-    if trt_runtime is None:
-        raise HTTPException(status_code=503, detail="TensorRT runtime not available")
-    
-    # Create dummy input matching TensorRT expected shape [batch, sequence, channels]
-   
-    input_shape = (inp.batch, inp.length, inp.channels)
-    x = np.random.randn(*input_shape).astype(np.float32)
-    
-    t0 = time.perf_counter()
-    output = trt_runtime.infer(x)
-    dt = (time.perf_counter() - t0) * 1000.0
-    
-    # Get prediction
-    prediction = int(np.argmax(output))
-    confidence = float(np.max(output))
-    
-    return {
-        "latency_ms": str(dt),
-        "prediction": str(prediction),
-        "confidence": str(confidence),
-        "cpu_percent": str(psutil.cpu_percent(interval=None)),
-        "shape": str(list(output.shape)),
-        "backend": "tensorrt"
-    }
-
-
 async def emg_stream_generator(
     config: StreamConfig
 ) -> AsyncGenerator[str, None]:
@@ -160,66 +152,73 @@ async def emg_stream_generator(
     start_time = time.time()
     frame_count = 0
     frame_interval = 1.0 / config.fps
-    
+
     # Select backend
+    
     use_trt = config.use_tensorrt and trt_runtime is not None
     backend = "tensorrt" if use_trt else "pytorch"
     
+    if config.emg_mode != settings.emg_mode.value:
+        settings.emg_mode = EMGMode(config.emg_mode)
+
     try:
-        while True:
-            # Check duration limit
+        # 🔹 EMG 스트림을 비동기 반복
+        async for emg in emg_stream.stream():
+            # duration 제한 체크
             if config.duration_seconds is not None:
                 elapsed = time.time() - start_time
+                
                 if elapsed >= config.duration_seconds:
-                    break
-            
+                    # 마지막 종료 메시지
+                    completion_response = {
+                        "status": "completed",
+                        "total_frames": frame_count,
+                        "duration_seconds": elapsed,
+                        "avg_fps": frame_count / elapsed if frame_count > 0 and elapsed > 0 else 0,
+                    }
+                    yield f"data: {json.dumps(completion_response)}\n\n"
+                    return  # 🔥 여기서 스트림 종료
+
             frame_start = time.time()
-            
-            # Get EMG data from stream
-            try:
-                emg_data = next(emg_stream)  # Shape: [sequence_length, channels]
-            except StopIteration:
-                break
-            
+
+            # EMG data: [win, ch] = [200, 16]
+            emg_data = emg.samples
+
             # Preprocess
             if config.preprocess:
-                # Z-score normalization
-                emg_normalized = (emg_data - emg_data.mean(axis=0)) / (emg_data.std(axis=0) + 1e-8)
+                emg_tensor = preprocess_emg_window(emg_data, scaler, meta)
             else:
-                emg_normalized = emg_data
-            
+                emg_tensor = emg_data
+
             # Run inference
             inference_start = time.perf_counter()
             
             if use_trt:
                 # TensorRT inference
                 # Add batch dimension: [1, sequence_length, channels]
-                emg_batch = np.expand_dims(emg_normalized, axis=0).astype(np.float32)
-                output = trt_runtime.infer(emg_batch)
+                x_np = emg_tensor.detach().cpu().numpy().astype(np.float32)
+                output = trt_runtime.infer(x_np)
                 
                 # Get prediction
-                prediction = int(np.argmax(output))
-                confidence = float(np.max(output))
+                probs = np.exp(output) / np.sum(np.exp(output), axis=-1, keepdims=True)
+                prediction = int(np.argmax(probs))
+                confidence = float(np.max(probs))
                 output_shape = list(output.shape)
                 
             else:
-                # PyTorch inference
-                # Convert to torch tensor: [batch, channels, sequence_length]
-                emg_tensor = torch.from_numpy(emg_normalized).float()
-                emg_tensor = emg_tensor.transpose(0, 1).unsqueeze(0)  # [1, channels, sequence_length]
-                
                 with torch.inference_mode():
-                    z, s = model(emg_tensor, num_steps=1)
-                
-                # Get prediction
+                    z = model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
+
+                # Prediction
                 prediction = int(torch.argmax(z, dim=-1).item())
                 confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
                 output_shape = list(z.shape)
-            
+
             inference_time = (time.perf_counter() - inference_start) * 1000.0
-            
-            # Prepare response
+
+            # SSE payload
             response = {
+                "status": "running",
                 "timestamp": time.time(),
                 "frame": frame_count,
                 "latency_ms": round(inference_time, 3),
@@ -228,38 +227,27 @@ async def emg_stream_generator(
                 "shape": output_shape,
                 "backend": backend,
                 "cpu_percent": psutil.cpu_percent(interval=None),
+                # 디버그용 tensor shape도 여기에 포함
+                "emg_tensor_shape": list(emg_tensor.shape),
             }
-            
-            # Yield as SSE format
-            import json
+
+            # SSE 포맷으로 전송
             yield f"data: {json.dumps(response)}\n\n"
-            
+
             frame_count += 1
-            
-            # Maintain target FPS
+
+            # FPS 유지
             frame_elapsed = time.time() - frame_start
             if frame_elapsed < frame_interval:
                 await asyncio.sleep(frame_interval - frame_elapsed)
-    
+
     except Exception as e:
-        import json
         error_response = {
             "error": str(e),
             "timestamp": time.time(),
-            "frame": frame_count
+            "frame": frame_count,
         }
         yield f"data: {json.dumps(error_response)}\n\n"
-    
-    finally:
-        # Send completion message
-        import json
-        completion_response = {
-            "status": "completed",
-            "total_frames": frame_count,
-            "duration_seconds": time.time() - start_time,
-            "avg_fps": frame_count / (time.time() - start_time) if frame_count > 0 else 0
-        }
-        yield f"data: {json.dumps(completion_response)}\n\n"
 
 
 @app.post("/infer/stream")
@@ -292,6 +280,12 @@ async def infer_stream(config: StreamConfig = StreamConfig()):
          -N
     ```
     """
+    global emg_stream, current_emg_mode
+    if config.emg_mode is not None and config.emg_mode != current_emg_mode:
+        # 모드 변경
+        current_emg_mode = config.emg_mode
+        # 새로운 EMG 스트림 재생성
+        emg_stream = build_emg_stream(current_emg_mode, settings)
     return StreamingResponse(
         emg_stream_generator(config),
         media_type="text/event-stream",
