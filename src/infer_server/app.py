@@ -42,6 +42,15 @@ artifact_dir = Path("./output/rate")
 model, scaler, label_encoder, meta = load_emg_model(
         artifact_dir, prefix="tcn", device="cpu"
 )
+snn_model, snn_scaler, snn_label_encoder, snn_meta = load_emg_model(
+        artifact_dir, prefix="snn", device="cpu"
+)
+hybrid_model, hybrid_scaler, hybrid_label_encoder, hybrid_meta = load_emg_model(
+        artifact_dir, prefix="hybrid", device="cpu"
+)
+spiking_tcn_model, spiking_tcn_scaler, spiking_tcn_label_encoder, spiking_tcn_meta = load_emg_model(
+        artifact_dir, prefix="spiking_tcn", device="cpu"
+)
 window_size = int(meta["window_size"])
 num_channels = int(meta["num_channels"])
 batch_size = 1

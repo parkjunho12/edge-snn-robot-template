@@ -255,8 +255,8 @@
             <div class="control-group">
                 <label>Backend</label>
                 <select id="backend">
-                    <option value="true">TensorRT</option>
                     <option value="false">PyTorch</option>
+                    <option value="true">TensorRT</option>
                 </select>
             </div>
 
@@ -324,6 +324,8 @@
         let frameCount = 0;
         let lastTimestamp = null;
         let latencyChart, predictionChart;
+        let totalConfidence = 0;
+        let correctCount = 0;
 
         // Initialize charts
         function initCharts() {
@@ -459,23 +461,25 @@
             const serverUrl = document.getElementById('serverUrl').value;
             const duration = parseFloat(document.getElementById('duration').value);
             const fps = parseInt(document.getElementById('fps').value);
-            const usePytorch = document.getElementById('backend').value === 'true';
+            const useTensorrt = document.getElementById('backend').value === 'true';
 
             // Reset counters
             frameCount = 0;
             latencyData = [];
             predictionCounts = [0, 0, 0, 0, 0, 0, 0];
             lastTimestamp = null;
+            totalConfidence = 0;
+            correctCount = 0;
 
             // Update UI
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
-            addLog(`Starting stream: ${duration}s @ ${fps} FPS (Backend: ${usePytorch ? 'PyTorch' : 'TensorRT'})`);
+            addLog(`Starting stream: ${duration}s @ ${fps} FPS (Backend: ${useTensorrt ? 'TensorRT' : 'Pytorch'})`);
 
             // Create EventSource
             const config = {
                 duration_seconds: duration,
-                use_tensorrt: usePytorch,
+                use_tensorrt: useTensorrt,
                 fps: fps,
                 preprocess: true
             };
@@ -560,14 +564,39 @@
             if (data.error) {
                 addLog(`Error: ${data.error}`, 'error');
             } else if (data.status === 'completed') {
+                const avgConfidence = frameCount > 0 
+                    ? (totalConfidence / frameCount) * 100
+                    : 0;
+                const avgAccuracy = frameCount > 0 
+                    ? (correctCount / frameCount) * 100 
+                    : 0;
+
+                document.getElementById('prediction').textContent = "Average Accuracy";
+                
+                document.getElementById('confidenceText').textContent = avgAccuracy.toFixed(2) + '%';
+                document.getElementById('confidenceBar').style.width = avgAccuracy.toFixed(2) + '%';
                 addLog(`Stream completed: ${data.total_frames} frames in ${data.duration_seconds.toFixed(2)}s`, 'info');
+                addLog(`Average Confidence: ${avgConfidence.toFixed(2)}%`, 'info');
+                addLog(`Average Accuracy: ${avgAccuracy.toFixed(2)}%`, 'info');
                 stopStream();
             } else {
+                frameCount++;
+                if (data.confidence > 0.8) {
+                    correctCount++;
+                }
+                totalConfidence += data.confidence;
                 updateDisplay(data);
                 updateCharts(data);
                 
                 if (data.frame % 30 === 0) {
-                    addLog(`Frame ${data.frame}: Pred=${data.prediction}, Conf=${(data.confidence * 100).toFixed(1)}%`);
+                    const avgConfidence = (totalConfidence / frameCount) * 100;
+                    const avgAccuracy = (correctCount / frameCount) * 100;
+                    addLog(
+                        `Frame ${data.frame}: Pred=${data.prediction}, `
+                        + `Conf=${(data.confidence * 100).toFixed(1)}%, `
+                        + `AvgConf=${avgConfidence.toFixed(1)}%`
+                        + `, Acc=${avgAccuracy.toFixed(1)}%`
+                    );
                 }
             }
         }
