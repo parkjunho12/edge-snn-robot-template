@@ -99,6 +99,7 @@ class StreamConfig(BaseModel):
     fps: int = 30  # Frames per second
     preprocess: bool = True  # Apply normalization
     emg_mode: EMGMode | None = EMGMode.DUMMY  # Optional EMG mode override
+    model_type: str = "TCN"  # "TCN", "SNN", "Hybrid", "SpikingTCN"
 
 class StreamResponse(BaseModel):
     timestamp: float
@@ -159,6 +160,23 @@ async def emg_stream_generator(
     
     if config.emg_mode != settings.emg_mode.value:
         settings.emg_mode = EMGMode(config.emg_mode)
+    
+    if config.model_type == "TCN":
+        cur_model = model
+        cur_scaler = scaler
+        cur_meta = meta
+    elif config.model_type == "SNN":
+        cur_model = snn_model
+        cur_scaler = snn_scaler
+        cur_meta = snn_meta
+    elif config.model_type == "Hybrid":
+        cur_model = hybrid_model
+        cur_scaler = hybrid_scaler
+        cur_meta = hybrid_meta
+    elif config.model_type == "SpikingTCN":
+        cur_model = spiking_tcn_model
+        cur_scaler = spiking_tcn_scaler
+        cur_meta = spiking_tcn_meta
 
     try:
         # 🔹 EMG 스트림을 비동기 반복
@@ -185,7 +203,7 @@ async def emg_stream_generator(
 
             # Preprocess
             if config.preprocess:
-                emg_tensor = preprocess_emg_window(emg_data, scaler, meta)
+                emg_tensor = preprocess_emg_window(emg_data, cur_scaler, cur_meta)
             else:
                 emg_tensor = emg_data
 
@@ -193,7 +211,7 @@ async def emg_stream_generator(
             inference_start = time.perf_counter()
             
             with torch.inference_mode():
-                z = model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
+                z = cur_model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
 
             # Prediction
             prediction = int(torch.argmax(z, dim=-1).item())
