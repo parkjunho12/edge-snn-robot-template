@@ -4,7 +4,7 @@ services:
       context: .                 # 컨텍스트는 리포 루트
     image: edge-snn-robot:linux_dev
     ports: ["8000:8000"]
-    restart: unless-stopped
+    restart: on-failure:3
     environment:
       - PYTHONUNBUFFERED=1
     container_name: edge-snn-robot_linux_dev
