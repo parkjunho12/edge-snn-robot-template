@@ -67,7 +67,7 @@ except Exception as e:
     print(f"⚠ TensorRT runtime not available: {e}")
     print("  Falling back to PyTorch inference")
 # TensorRT runtime (for optimized inference)
-current_emg_mode: EMGMode = settings.emg_mode
+current_emg_mode: EMGMode = EMGMode.NINAPRO
 
 ninapro_cfg = build_ninapro_cfg(settings)
 ninapro_emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
@@ -113,7 +113,7 @@ class StreamConfig(BaseModel):
     use_tensorrt: bool = False
     fps: int = 30  # Frames per second
     preprocess: bool = True  # Apply normalization
-    emg_mode: EMGMode | None = EMGMode.DUMMY  # Optional EMG mode override
+    emg_mode: EMGMode | None = EMGMode.NINAPRO  # Optional EMG mode override
     model_type: str = "TCN"  # "TCN", "SNN", "Hybrid", "SpikingTCN"
 
 
@@ -221,7 +221,7 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
 
             # Preprocess
             if config.preprocess:
-                emg_tensor = preprocess_emg_window(emg_data, scaler, meta)
+                emg_tensor = preprocess_emg_window(emg_data, cur_scaler, cur_meta)
             else:
                 emg_tensor = emg_data
 
@@ -242,7 +242,7 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
 
             else:
                 with torch.inference_mode():
-                    z = model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
+                    z = cur_model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
 
                 # Prediction
                 prediction = int(torch.argmax(z, dim=-1).item())
