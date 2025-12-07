@@ -252,6 +252,17 @@ async def emg_stream_generator(
             "frame": frame_count,
         }
         yield f"data: {json.dumps(error_response)}\n\n"
+    finally:
+        # Send completion message
+        import json
+        completion_response = {
+            "status": "completed",
+            "total_frames": frame_count,
+            "duration_seconds": time.time() - start_time,
+            "avg_fps": frame_count / (time.time() - start_time) if frame_count > 0 else 0
+        }
+        yield f"data: {json.dumps(completion_response)}\n\n"
+
 
 
 @app.post("/infer/stream")
