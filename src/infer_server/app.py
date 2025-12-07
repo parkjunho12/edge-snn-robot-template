@@ -254,7 +254,6 @@ async def emg_stream_generator(
         yield f"data: {json.dumps(error_response)}\n\n"
     finally:
         # Send completion message
-        import json
         completion_response = {
             "status": "completed",
             "total_frames": frame_count,
