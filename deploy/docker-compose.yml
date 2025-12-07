@@ -7,4 +7,5 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+    container_name: edge-snn-robot_linux_dev
 
