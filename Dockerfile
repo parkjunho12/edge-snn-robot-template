@@ -1,11 +1,10 @@
 # 베이스: ROS 2 Humble (Ubuntu 22.04)
-FROM osrf/ros:humble-desktop
+FROM python:3.10-slim
 
 # 시스템 패키지 & rclpy 설치 (apt)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-pip python3-venv python3-dev \
       build-essential \
-      ros-humble-rclpy \
     && rm -rf /var/lib/apt/lists/*
 
 # 가상환경 생성 및 PATH 설정
@@ -30,6 +29,11 @@ RUN python -m pip install --upgrade pip && \
 
 # 앱 소스 복사
 COPY src /lab/src
+COPY scripts /lab/scripts
+
+RUN python scripts/download_data.py --mat s1.mat
+
+RUN python scripts/download_data.py --artifacts
 
 # 기본 포트
 EXPOSE 8000

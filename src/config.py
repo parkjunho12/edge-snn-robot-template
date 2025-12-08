@@ -8,13 +8,13 @@ from src.emg_io.data_src.ninapro import NinaProConfig
 
 
 class Settings(BaseSettings):
-    emg_mode: EMGMode = EMGMode.DUMMY
+    emg_mode: EMGMode = EMGMode.NINAPRO
     emg_port: str | None = None
     emg_win: int = 200
-    emg_ch: int = 8
+    emg_ch: int = 16
     emg_fs: int = 2000
 
-    ninapro_path: Path | None = None
+    ninapro_path: Path | None = Path("./src/data/s1.mat")
 
     class Config:
         env_file = ".env"
@@ -23,14 +23,14 @@ class Settings(BaseSettings):
 
 def build_ninapro_cfg(settings: Settings) -> NinaProConfig:
     cfg = NinaProConfig(
-        path=Path("../data/s1.mat"),
+        path=Path("./src/data/s1.mat"),
         fs=2000,
         win=200,
         hop=200,
-        ch=12,
+        ch=16,
         key="emg",
         label_key="labels",
-        windowed=True,   # ★ 그대로 load
+        windowed=False,   # ★ 그대로 load
     )
     if settings.ninapro_path is None:
         raise RuntimeError("NinaPro path not configured")

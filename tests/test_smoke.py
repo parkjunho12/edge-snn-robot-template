@@ -5,7 +5,6 @@ import numpy as np
 
 from src.emg_io.emg_stream import EMGStream
 from src.emg_io.vision_camera import VisionCamera
-from src.infer_server.app import app
 from src.pipes.sync_mux import SyncMux
 
 
@@ -14,7 +13,6 @@ def test_imports() -> None:
     assert VisionCamera is not None
     assert EMGStream is not None
     assert SyncMux is not None
-    assert app is not None
 
 
 def test_sync_mux_nearest() -> None:

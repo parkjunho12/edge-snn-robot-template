@@ -176,3 +176,6 @@ output/delta/*.pkl
 output/latency/*.json
 output/rate/*.json
 output/delta/*.json
+output/latency/*.plan
+output/rate/*.plan
+output/delta/*.plan

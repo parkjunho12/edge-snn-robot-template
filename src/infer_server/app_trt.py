@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import Settings, build_ninapro_cfg
 from src.emg_io.emg_stream import EMGMode, get_emg_stream, EMGStream
+from src.infer_server.runtime_trt import TRTRuntime
 
 from src.infer_server.emg_artifacts import (
     load_emg_model,
@@ -21,11 +22,8 @@ from src.infer_server.emg_artifacts import (
     infer_single_window,
 )
 
-
-trt_runtime: Optional[str] = None
-
 settings = Settings()
-settings.ninapro_path = "../data/s1.mat"
+settings.ninapro_path = "./src/data/s1.mat"
 app = FastAPI(title="Edge SNN Robot Dashboard")
 
 origins = ["*"]  # 또는 ["http://localhost:5500", "http://127.0.0.1:5500"]
@@ -56,8 +54,19 @@ spiking_tcn_model, spiking_tcn_scaler, spiking_tcn_label_encoder, spiking_tcn_me
 window_size = int(meta["window_size"])
 num_channels = int(meta["num_channels"])
 batch_size = 1
+
+trt_runtime: Optional[TRTRuntime] = None
+try:
+    trt_runtime = TRTRuntime("output/rate/model_tcn_fp16.plan")
+    trt_runtime.warmup(
+        input_shape=(batch_size, window_size, num_channels), num_iterations=10
+    )
+    print("✓ TensorRT runtime loaded successfully")
+except Exception as e:
+    print(f"⚠ TensorRT runtime not available: {e}")
+    print("  Falling back to PyTorch inference")
 # TensorRT runtime (for optimized inference)
-current_emg_mode: EMGMode = settings.emg_mode
+current_emg_mode: EMGMode = EMGMode.NINAPRO
 
 ninapro_cfg = build_ninapro_cfg(settings)
 ninapro_emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
@@ -103,7 +112,7 @@ class StreamConfig(BaseModel):
     use_tensorrt: bool = False
     fps: int = 30  # Frames per second
     preprocess: bool = True  # Apply normalization
-    emg_mode: EMGMode | None = EMGMode.DUMMY  # Optional EMG mode override
+    emg_mode: EMGMode | None = EMGMode.NINAPRO  # Optional EMG mode override
     model_type: str = "TCN"  # "TCN", "SNN", "Hybrid", "SpikingTCN"
 
 
@@ -218,13 +227,26 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
             # Run inference
             inference_start = time.perf_counter()
 
-            with torch.inference_mode():
-                z = cur_model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
+            if use_trt:
+                # TensorRT inference
+                # Add batch dimension: [1, sequence_length, channels]
+                x_np = emg_tensor.detach().cpu().numpy().astype(np.float32)
+                output = trt_runtime.infer(x_np)
 
-            # Prediction
-            prediction = int(torch.argmax(z, dim=-1).item())
-            confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
-            output_shape = list(z.shape)
+                # Get prediction
+                probs = np.exp(output) / np.sum(np.exp(output), axis=-1, keepdims=True)
+                prediction = int(np.argmax(probs))
+                confidence = float(np.max(probs))
+                output_shape = list(output.shape)
+
+            else:
+                with torch.inference_mode():
+                    z = cur_model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
+
+                # Prediction
+                prediction = int(torch.argmax(z, dim=-1).item())
+                confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
+                output_shape = list(z.shape)
 
             inference_time = (time.perf_counter() - inference_start) * 1000.0
 

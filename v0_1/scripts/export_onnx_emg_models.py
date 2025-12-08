@@ -17,12 +17,6 @@ from src.emg_io.data_src.ninapro import (
     preprocess_data_for_networks,
 )
 
-from src.emg_io.spiking_tcn_onnx_wrapper import (
-    SpikingTCNONNXWrapper,
-    export_spiking_tcn_full,
-    verify_spiking_tcn_export,
-)
-
 
 class ExportWrapper(nn.Module):
     """
@@ -142,7 +136,7 @@ def compare_outputs(pth_model, onnx_path, test_input, device="cpu"):
     abs_diff = np.abs(pth_np - onnx_output)
     rel_diff = abs_diff / (np.abs(pth_np) + 1e-7)
 
-    print(f"\n--- Difference Statistics ---")
+    print("\n--- Difference Statistics ---")
     print(f"Max absolute diff: {np.max(abs_diff):.6f}")
     print(f"Mean absolute diff: {np.mean(abs_diff):.6f}")
     print(f"Max relative diff: {np.max(rel_diff):.6f}")
@@ -152,7 +146,7 @@ def compare_outputs(pth_model, onnx_path, test_input, device="cpu"):
     pth_pred = np.argmax(pth_np, axis=1)
     onnx_pred = np.argmax(onnx_output, axis=1)
 
-    print(f"\n--- Predictions ---")
+    print("\n--- Predictions ---")
     print(f"PyTorch prediction: {pth_pred}")
     print(f"ONNX prediction:    {onnx_pred}")
     print(f"Match: {np.array_equal(pth_pred, onnx_pred)}")
@@ -260,9 +254,10 @@ def main():
                 "emg": {0: "batch_size", 1: "time_steps"},
                 "logits": {0: "batch_size"},
             },
+            dynamo=False,
         )
         print("    ✅ ONNX export done")
-        print(f"    - Verifying ONNX export...")
+        print("    - Verifying ONNX export...")
         compare_outputs(wrapper, onnx_path, emg_tensor, device)
 
     print("\n=== All ONNX exports complete ===")

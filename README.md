@@ -65,6 +65,7 @@ cd edge-snn-robot-template
 
 # 2) Python env
 python -m venv .venv && source .venv/bin/activate
+
 pip install --upgrade pip
 pip install -r requirements.txt
 
@@ -79,36 +80,22 @@ python scripts/download_data.py --mat s3.mat
 # 4) Download artifacts
 python scripts/download_data.py --artifacts
 
+cd v0_1
+# v0_1 README.md read
+
+cd ..
+
 # 5) Test single window(mat file) [Optional]
-python -m scripts.test_emg_model \
-  --artifact-dir ./output/rate \
-  --model-prefix spiking_tcn \
-  --sample-from-mat ./src/data/s1.mat \
-  --sample-index 100
-
 # 6) Compare models [Optional]
-python -m scripts.compare_models \
-  --artifact-dir ./output/rate \
-  --model-prefixes snn,tcn,hybrid,spiking_tcn \
-  --mat-path ./src/data/s1.mat \
-  --max-samples 200 \
-  --shuffle
-
 # 7) Export onnx and compare with pytorch
-python -m scripts.export_onnx_emg_models \
-  --artifact-dir ./output/{encoding_type} \
-  --model-prefixes snn,tcn,hybrid,spiking_tcn --sample-from-mat ./src/data/s1.mat \
-  --sample-index 124
-
 # 8) Validate onnx (Optional)
-python -m scripts.onnx_model_eval \       
-  --artifact-dir ./output/{encoding_type} \  
-  --model-prefix spiking_tcn \                                                     
-  --mat-path ./src/data/s1.mat \
-  --val-ratio 0.2 \
-  --batch-size 64 \
-  --max-samples 5000
 
+cd v0_2
+# v0_2 README.md read
+
+cd ..
+
+# 9) 
 
 # 9) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
@@ -125,7 +112,7 @@ colcon build --symlink-install
 
 
 # 11) Docker build (edge)
-docker build -t edge-snn-robot:dev deploy/
+docker build -t edge-snn-robot:dev .
 docker compose -f deploy/docker-compose.yml up
 ```
 
@@ -152,12 +139,19 @@ flowchart LR
 
 ## Roadmap (6 months)
 
-- v0.1: minimal SNN control loop + metrics ([tag](https://github.com/parkjunho12/edge-snn-robot-template/releases/tag/v0.1.16))
-- v0.2: **sEMG-only input + INT8/TensorRT** (working, p95<30 ms target)
-- v0.3: edge container + dashboard (soon)
-- v0.4: Hybrid TCN–SNN ablation/results (soon)
-- v0.5: robustness + fail-safe (soon)
-- v1.0: report + kit release (soon)
+- ### ([v0.1](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_1)): minimal SNN control loop + metrics ([tag](https://github.com/parkjunho12/edge-snn-robot-template/releases/tag/v0.1.16))
+
+
+- ### ([v0.2](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_2)): **sEMG-only input + INT8/TensorRT**   (working)
+
+✓ Requirement: p95 < 30 ms → PASSED  
+✗ Hybrid/SNN models: ONNX/TensorRT export pending, Spikegen encoding problem
+
+- ### v0.3: edge container + dashboard (soon)
+- ### v0.4: Hybrid TCN–SNN ablation/results (soon)
+- ### v0.5: robustness + fail-safe (soon)
+- ### v1.0: report + kit release (soon)
+
 
 ## License
 

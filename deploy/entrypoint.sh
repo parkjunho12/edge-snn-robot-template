@@ -2,7 +2,7 @@
 set -e
 
 # ROS 환경 로드
-source /opt/ros/humble/setup.bash
+# source /opt/ros/humble/setup.bash
 
 # 워킹 디렉토리로 이동
 cd /lab
