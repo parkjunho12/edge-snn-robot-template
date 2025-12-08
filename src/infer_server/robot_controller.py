@@ -21,6 +21,8 @@ import logging
 from enum import Enum
 from typing import Optional, Dict, Any
 
+import time
+
 logger = logging.getLogger(__name__)
 
 
@@ -330,8 +332,6 @@ if __name__ == "__main__":
         (5, "Pinch"),
         (6, "Point"),
     ]
-
-    import time
 
     for gesture_id, gesture_name in gestures:
         print(f"\nTesting {gesture_name}...")
