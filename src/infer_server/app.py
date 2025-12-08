@@ -21,6 +21,9 @@ from src.infer_server.emg_artifacts import (
     infer_single_window,
 )
 
+
+trt_runtime: Optional[str] = None
+
 settings = Settings()
 settings.ninapro_path = "../data/s1.mat"
 app = FastAPI(title="Edge SNN Robot Dashboard")
@@ -155,7 +158,7 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
     frame_interval = 1.0 / config.fps
 
     # Select backend
-    trt_runtime = None
+
     use_trt = config.use_tensorrt and trt_runtime is not None
     backend = "tensorrt" if use_trt else "pytorch"
 

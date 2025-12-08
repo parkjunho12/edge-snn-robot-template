@@ -7,14 +7,13 @@ import json
 import psutil
 import torch
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import Settings, build_ninapro_cfg
 from src.emg_io.emg_stream import EMGMode, get_emg_stream, EMGStream
-from src.models.hybrid_tcnsnn import HybridTCNSNN
 from src.infer_server.runtime_trt import TRTRuntime
 
 from src.infer_server.emg_artifacts import (
