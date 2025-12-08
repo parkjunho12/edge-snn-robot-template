@@ -333,8 +333,6 @@ if __name__ == "__main__":
         (6, "Point"),
     ]
 
-    import time
-
     for gesture_id, gesture_name in gestures:
         print(f"\nTesting {gesture_name}...")
         controller.send_command(prediction=gesture_id, confidence=0.9)
