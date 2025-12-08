@@ -31,6 +31,7 @@ class EMGStream(Protocol):
     """Common async EMG stream interface."""
 
     async def stream(self) -> AsyncIterator[EMG]: ...
+    def random_window_async(self) -> EMG: ...
 
 
 class NinaProEMGStream(EMGStream):
@@ -60,6 +61,16 @@ class NinaProEMGStream(EMGStream):
             yield EMG(ts=ts, samples=emg[i])
             if self.realtime:
                 await asyncio.sleep(dt)
+    
+    def random_window(self) -> EMG:
+        """Return a single random EMG window from NinaPro dataset."""
+        win_data = self._lazy_load()
+        emg = win_data.samples  # [N, win, ch]
+        N, win, ch = emg.shape
+
+        idx = np.random.randint(0, N)
+        ts = time.time()
+        return EMG(ts=ts, samples=emg[idx])
 
 
 class RealtimeEMGStream:
@@ -107,6 +118,14 @@ class RealtimeEMGStream:
         finally:
             ser.close()
 
+    def random_window(self) -> EMG:
+        """
+        For realtime mode there is no historical buffer by default,
+        so we just return a synthetic random window with same shape.
+        """
+        ts = time.time()
+        samples = np.random.randn(self.win, self.ch).astype(np.float32)
+        return EMG(ts=ts, samples=samples)
 
 class DummyEMGStream:
     """Synthetic EMG generator for tests and dev."""
@@ -132,6 +151,12 @@ class DummyEMGStream:
             t += dt
             if self.realtime:
                 await asyncio.sleep(dt)
+    
+    def random_window(self) -> EMG:
+        """Return a single synthetic EMG window."""
+        ts = time.time()
+        samples = np.random.randn(self.win, self.ch).astype(np.float32)
+        return EMG(ts=ts, samples=samples)
 
 
 class EMGMode(str, Enum):

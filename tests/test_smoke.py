@@ -4,13 +4,11 @@ from __future__ import annotations
 import numpy as np
 
 from src.emg_io.emg_stream import EMGStream
-from src.emg_io.vision_camera import VisionCamera
 from src.pipes.sync_mux import SyncMux
 
 
 def test_imports() -> None:
     # Classes should be importable
-    assert VisionCamera is not None
     assert EMGStream is not None
     assert SyncMux is not None
 

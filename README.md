@@ -27,27 +27,40 @@ You can treat this as a starting point for:
 
 - `src/`
   - `models/` – TCN / SNN / Hybrid TCN–SNN models (PyTorch + snnTorch)
-  - `control/` – low-latency control loop (policy → command)
-  - `infer_server/` – FastAPI app exposing `/infer` and `/health`
-  - `io/` – encoders/decoders (e.g. EMG/IMU → spikes, sliding windows)
-  - `metrics/` – latency & spike/energy counters, tegrastats parser
+  - `control/` – unified low-latency control (MATLAB simulator / ROS2 / simulation)
+  - `infer_server/` – FastAPI inference server (REST + streaming + dashboard hooks)
+  - `emg_io/` – EMG loaders (NinaPro), random window sampler, realtime serial stream, spike encoders, preprocessing (z-score, sliding windows)
+  - `pipes/` – latency, FPS, CPU usage, spike/energy counters, tegrastats parser
+  - `config.py` – central configuration (dataset paths, model, encoder, hyperparams)
 - `ros2_ws/`
   - ROS2 nodes to bridge topics ↔ inference server
   - Messages/services for commands & sensor streams
 - `eval/`
-  - Latency benchmark scripts
-  - Spike/energy metric tooling
+  - Latency benchmark scripts (PyTorch vs TensorRT, p95 measurements)
+  - Spike/energy metric tooling (sparsity, synaptic events)
 - `deploy/`
   - Dockerfile + `docker-compose.yml` for edge devices (Pi / Jetson / x86)
   - Entrypoint script + env template
+- `matlab_simulator/`
+  - 3D robot hand/arm simulators for visual debugging
 - `firmware/`
   - ESP32 / OpenMV example stubs for low-level I/O
+- `scripts/`
+  - dataset/tools (NinaPro download, artifact download, export)
+- `examples/`
+  - minimal runnable demos (forward pass, spike encoding)
 - `docs/`
   - MkDocs skeleton (architecture notes, BOM, wiring examples)
 - `tests/`
   - `pytest` smoke tests (imports + simple forward pass)
 - `notebooks/`
   - Prototyping & analysis notebooks (optional)
+- `output/`
+  - logs, latency traces, artifacts, exported results
+- `v0_1/`
+  - milestone 1 (minimal loop + metrics)
+- `v0_2/`
+  - milestone 2 (EMG-only + TensorRT + dashboard)
 
 CI:
 

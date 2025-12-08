@@ -21,12 +21,16 @@ from src.infer_server.emg_artifacts import (
     infer_single_window,
 )
 
+from src.infer_server.robot_controller import create_controller
+from fastapi import BackgroundTasks
 
 trt_runtime: Optional[str] = None
 
 settings = Settings()
 settings.ninapro_path = "../data/s1.mat"
 app = FastAPI(title="Edge SNN Robot Dashboard")
+
+controller = create_controller("matlab")
 
 origins = ["*"]  # 또는 ["http://localhost:5500", "http://127.0.0.1:5500"]
 
@@ -83,6 +87,15 @@ def build_emg_stream(mode: EMGMode, settings: Settings) -> EMGStream:
     return emg_stream
 
 
+async def perform_gesture_async(controller, pred, duration=2, rate=30):
+    interval = 1.0 / rate
+    end = time.time() + duration
+
+    while time.time() < end:
+        controller.send_command(prediction=pred, confidence=0.9)
+        await asyncio.sleep(interval)  # NON-BLOCKING
+
+
 emg_stream: EMGStream = build_emg_stream(current_emg_mode, settings)
 
 
@@ -130,10 +143,10 @@ def health() -> dict[str, str]:
 def infer(inp: InferInput) -> dict[str, str]:
     """Single inference with PyTorch model"""
 
-    emg_window = None
-    emg_window = np.random.randn(window_size, num_channels).astype(np.float32)
-    print(f"    - Dummy EMG shape: {emg_window.shape}")
-    emg_tensor = preprocess_emg_window(emg_window, scaler, meta)
+    emg = emg_stream.random_window()
+
+    emg_data = emg.samples
+    emg_tensor = preprocess_emg_window(emg_data, scaler, meta)
     t0 = time.perf_counter()
     pred_idx, pred_label, conf, probs = infer_single_window(
         model, emg_tensor, label_encoder, device=inp.device
@@ -149,7 +162,9 @@ def infer(inp: InferInput) -> dict[str, str]:
     }
 
 
-async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None]:
+async def emg_stream_generator(
+    config: StreamConfig, background_tasks: BackgroundTasks
+) -> AsyncGenerator[str, None]:
     """
     Async generator that yields EMG inference results as Server-Sent Events (SSE)
     """
@@ -226,6 +241,8 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
             confidence = float(torch.max(torch.softmax(z, dim=-1)).item())
             output_shape = list(z.shape)
 
+            background_tasks.add_task(perform_gesture_async, controller, prediction)
+
             inference_time = (time.perf_counter() - inference_start) * 1000.0
 
             # SSE payload
@@ -274,7 +291,10 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
 
 
 @app.post("/infer/stream")
-async def infer_stream(config: StreamConfig = StreamConfig()):
+async def infer_stream(
+    config: StreamConfig = StreamConfig(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+):
     """
     Streaming inference endpoint using Server-Sent Events (SSE)
     
@@ -310,7 +330,7 @@ async def infer_stream(config: StreamConfig = StreamConfig()):
         # 새로운 EMG 스트림 재생성
         emg_stream = build_emg_stream(current_emg_mode, settings)
     return StreamingResponse(
-        emg_stream_generator(config),
+        emg_stream_generator(config, background_tasks=background_tasks),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

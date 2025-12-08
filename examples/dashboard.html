@@ -229,6 +229,28 @@
             margin-left: 10px;
             animation: pulse 1s infinite;
         }
+        .video-container {
+            margin-bottom: 30px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .video-title {
+            padding: 10px 15px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #000;
+        }
     </style>
 </head>
 <body>
@@ -322,6 +344,18 @@
         <div class="chart-container">
             <div class="chart-title">📊 Event Log</div>
             <div class="log-container" id="logContainer"></div>
+        </div>
+        <div class="video-container">
+            <div class="video-title">🎬 EMG → 로봇 손 데모 영상</div>
+            <video id="emgVideo" controls autoplay loop muted>
+                <!-- 파일이 index.html과 같은 폴더에 있을 경우 -->
+                <!-- <source src="emg_demo.mp4" type="video/mp4"> -->
+        
+                <!-- FastAPI static(/static/...)으로 서빙할 경우 예시 -->
+                <source src="../videos/robot_hand_matlab.mp4" type="video/mp4">
+        
+                Your browser does not support the video tag.
+            </video>
         </div>
     </div>
 
