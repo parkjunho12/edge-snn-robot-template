@@ -33,7 +33,6 @@ jobs:
       - name: Show env
         run: |
           python3 -V
-          bash -lc 'source /opt/ros/humble/setup.bash && echo "ROS sourced"'
 
       - name: Ensure test tools
         run: |
