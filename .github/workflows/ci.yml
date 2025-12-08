@@ -38,6 +38,7 @@ jobs:
       - name: Ensure test tools
         run: |
           python3 -m pip install --upgrade pip || true
+
           pip install -U flake8 pytest || true
 
       - name: Install deps (filter out rclpy)
@@ -152,7 +153,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ env.BUILD_CONTEXT }}
-          file: ./deploy/Dockerfile  
+          file: ./Dockerfile  
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
