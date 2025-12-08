@@ -32,24 +32,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],      # POST, GET, OPTIONS 등 모두 허용
-    allow_headers=["*"],      # Content-Type 같은 헤더 허용
+    allow_methods=["*"],  # POST, GET, OPTIONS 등 모두 허용
+    allow_headers=["*"],  # Content-Type 같은 헤더 허용
 )
 
 # PyTorch model (original)
 
 artifact_dir = Path("./output/rate")
 model, scaler, label_encoder, meta = load_emg_model(
-        artifact_dir, prefix="tcn", device="cpu"
+    artifact_dir, prefix="tcn", device="cpu"
 )
 snn_model, snn_scaler, snn_label_encoder, snn_meta = load_emg_model(
-        artifact_dir, prefix="snn", device="cpu"
+    artifact_dir, prefix="snn", device="cpu"
 )
 hybrid_model, hybrid_scaler, hybrid_label_encoder, hybrid_meta = load_emg_model(
-        artifact_dir, prefix="hybrid", device="cpu"
+    artifact_dir, prefix="hybrid", device="cpu"
 )
-spiking_tcn_model, spiking_tcn_scaler, spiking_tcn_label_encoder, spiking_tcn_meta = load_emg_model(
-        artifact_dir, prefix="spiking_tcn", device="cpu"
+spiking_tcn_model, spiking_tcn_scaler, spiking_tcn_label_encoder, spiking_tcn_meta = (
+    load_emg_model(artifact_dir, prefix="spiking_tcn", device="cpu")
 )
 window_size = int(meta["window_size"])
 num_channels = int(meta["num_channels"])
@@ -59,6 +59,7 @@ current_emg_mode: EMGMode = settings.emg_mode
 
 ninapro_cfg = build_ninapro_cfg(settings)
 ninapro_emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
+
 
 def build_emg_stream(mode: EMGMode, settings: Settings) -> EMGStream:
     if settings.emg_mode == EMGMode.NINAPRO:
@@ -79,6 +80,7 @@ def build_emg_stream(mode: EMGMode, settings: Settings) -> EMGStream:
         )
     return emg_stream
 
+
 emg_stream: EMGStream = build_emg_stream(current_emg_mode, settings)
 
 
@@ -86,6 +88,7 @@ class InferenceInput(BaseModel):
     batch: int = 1
     channels: int = 16
     length: int = 200
+
 
 class InferInput(BaseModel):
     encoding_type: str = "rate"
@@ -100,6 +103,7 @@ class StreamConfig(BaseModel):
     preprocess: bool = True  # Apply normalization
     emg_mode: EMGMode | None = EMGMode.DUMMY  # Optional EMG mode override
     model_type: str = "TCN"  # "TCN", "SNN", "Hybrid", "SpikingTCN"
+
 
 class StreamResponse(BaseModel):
     timestamp: float
@@ -143,9 +147,7 @@ def infer(inp: InferInput) -> dict[str, str]:
     }
 
 
-async def emg_stream_generator(
-    config: StreamConfig
-) -> AsyncGenerator[str, None]:
+async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None]:
     """
     Async generator that yields EMG inference results as Server-Sent Events (SSE)
     """
@@ -157,10 +159,10 @@ async def emg_stream_generator(
     trt_runtime = None
     use_trt = config.use_tensorrt and trt_runtime is not None
     backend = "tensorrt" if use_trt else "pytorch"
-    
+
     if config.emg_mode != settings.emg_mode.value:
         settings.emg_mode = EMGMode(config.emg_mode)
-    
+
     if config.model_type == "TCN":
         cur_model = model
         cur_scaler = scaler
@@ -184,14 +186,18 @@ async def emg_stream_generator(
             # duration 제한 체크
             if config.duration_seconds is not None:
                 elapsed = time.time() - start_time
-                
+
                 if elapsed >= config.duration_seconds:
                     # 마지막 종료 메시지
                     completion_response = {
                         "status": "completed",
                         "total_frames": frame_count,
                         "duration_seconds": elapsed,
-                        "avg_fps": frame_count / elapsed if frame_count > 0 and elapsed > 0 else 0,
+                        "avg_fps": (
+                            frame_count / elapsed
+                            if frame_count > 0 and elapsed > 0
+                            else 0
+                        ),
                     }
                     yield f"data: {json.dumps(completion_response)}\n\n"
                     return  # 🔥 여기서 스트림 종료
@@ -209,7 +215,7 @@ async def emg_stream_generator(
 
             # Run inference
             inference_start = time.perf_counter()
-            
+
             with torch.inference_mode():
                 z = cur_model(emg_tensor)  # num_steps 생략/내부에서 처리한다고 가정
 
@@ -258,10 +264,11 @@ async def emg_stream_generator(
             "status": "completed",
             "total_frames": frame_count,
             "duration_seconds": time.time() - start_time,
-            "avg_fps": frame_count / (time.time() - start_time) if frame_count > 0 else 0
+            "avg_fps": (
+                frame_count / (time.time() - start_time) if frame_count > 0 else 0
+            ),
         }
         yield f"data: {json.dumps(completion_response)}\n\n"
-
 
 
 @app.post("/infer/stream")
@@ -307,7 +314,7 @@ async def infer_stream(config: StreamConfig = StreamConfig()):
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
-        }
+        },
     )
 
 
@@ -329,34 +336,34 @@ def stream_stats() -> dict:
 def benchmark(num_iterations: int = 1000) -> dict:
     """Benchmark inference performance"""
     results = {"pytorch": None, "tensorrt": None}
-    
+
     # PyTorch benchmark
     x = torch.rand(1, 16, 200)
     latencies_pytorch = []
-    
+
     for _ in range(num_iterations):
         t0 = time.perf_counter()
         with torch.inference_mode():
             z, s = model(x)
         dt = (time.perf_counter() - t0) * 1000.0
         latencies_pytorch.append(dt)
-    
+
     results["pytorch"] = {
         "mean_latency_ms": float(np.mean(latencies_pytorch)),
         "median_latency_ms": float(np.median(latencies_pytorch)),
         "p99_latency_ms": float(np.percentile(latencies_pytorch, 99)),
         "throughput_qps": 1000.0 / np.mean(latencies_pytorch),
     }
-    
+
     # TensorRT benchmark
     if trt_runtime:
         trt_results = trt_runtime.benchmark(
             input_shape=(1, 200, 16),
             num_iterations=num_iterations,
-            warmup_iterations=50
+            warmup_iterations=50,
         )
         results["tensorrt"] = trt_results
-    
+
     return results
 
 
@@ -370,5 +377,5 @@ async def root() -> dict[str, str]:
             "TensorRT acceleration",
             "Real-time EMG streaming",
             "Server-Sent Events (SSE)",
-        ]
+        ],
     }

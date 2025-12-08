@@ -8,6 +8,7 @@ REQUESTS_PER_SECOND = 2
 DURATION_MINUTES = 30
 TIMEOUT_SECONDS = 2.0  # 요청 타임아웃
 
+
 def main():
     total_requests = 0
     success = 0
@@ -31,8 +32,8 @@ def main():
                 payload = {
                     "encoding_type": "rate",
                     "model_prefix": "tcn",
-                    "device": "cpu"
-                }           
+                    "device": "cpu",
+                }
                 r = requests.post(API_URL, json=payload, timeout=TIMEOUT_SECONDS)
                 latency = (time.time() - t0) * 1000.0  # ms
 
@@ -70,6 +71,7 @@ def main():
         print(f"Min latency (ms):      {min(latencies):.3f}")
         print(f"Max latency (ms):      {max(latencies):.3f}")
     print("==========================================================")
+
 
 if __name__ == "__main__":
     main()

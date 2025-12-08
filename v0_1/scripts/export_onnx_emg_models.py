@@ -260,7 +260,7 @@ def main():
                 "emg": {0: "batch_size", 1: "time_steps"},
                 "logits": {0: "batch_size"},
             },
-            dynamo=False
+            dynamo=False,
         )
         print("    ✅ ONNX export done")
         print(f"    - Verifying ONNX export...")
