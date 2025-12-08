@@ -101,7 +101,7 @@ class StreamingInferenceClient:
                                 print(f"ERROR: {data['error']}")
                             elif "status" in data and data["status"] == "completed":
                                 print(f"\n{'='*60}")
-                                print(f"Stream completed:")
+                                print("Stream completed:")
                                 print(f"  Total frames: {data['total_frames']}")
                                 print(f"  Duration: {data['duration_seconds']:.2f}s")
                                 print(f"  Average FPS: {data['avg_fps']:.2f}")
@@ -150,7 +150,7 @@ def example_stream_stats():
     client = StreamingInferenceClient()
     stats = client.get_stream_stats()
 
-    print(f"\nStream Configuration:")
+    print("\nStream Configuration:")
     print(f"  TensorRT available: {stats['tensorrt_available']}")
     print(f"  EMG mode: {stats['emg_mode']}")
     print(f"  Window size: {stats['emg_window_size']}")
@@ -213,12 +213,12 @@ def example_streaming_with_callback():
     predictions = []
 
     def custom_callback(data):
-        nonlocal frame_count, latencies, predictions
+        nonlocal frame_count
 
         if "error" in data:
             print(f"ERROR: {data['error']}")
         elif "status" in data and data["status"] == "completed":
-            print(f"\nStatistics:")
+            print("\nStatistics:")
             print(f"  Total frames: {len(latencies)}")
             print(f"  Mean latency: {sum(latencies)/len(latencies):.2f}ms")
             print(f"  Max latency: {max(latencies):.2f}ms")

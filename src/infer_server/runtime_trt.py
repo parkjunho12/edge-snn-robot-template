@@ -9,9 +9,8 @@ import argparse
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
-import pycuda.autoinit
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -118,7 +117,7 @@ class TRTRuntime:
         # Create execution context
         self.context = self.engine.create_execution_context()
 
-        logger.info(f"Engine loaded successfully")
+        logger.info("Engine loaded successfully")
         num_bindings = getattr(self.engine, "num_bindings", None)
         if num_bindings is None:
             num_bindings = self.engine.num_io_tensors
@@ -341,6 +340,8 @@ class TRTRuntime:
         output_shape = self.context.get_binding_shape(output_binding_idx)
         output_name = self.engine.get_binding_name(output_binding_idx)
 
+        print(f"Output binding name: {output_name}, shape: {output_shape}")
+        
         # Reshape output
         output_data = self.outputs[output_binding_idx]["host"].reshape(output_shape)
 
