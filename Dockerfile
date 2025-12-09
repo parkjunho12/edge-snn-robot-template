@@ -1,4 +1,6 @@
-# 베이스: ROS 2 Humble (Ubuntu 22.04)
+# 베이스: Python 3.10 (Ubuntu 22.04)
+# ROS2 (Jetson or Raspberry Pi): ROS 2 Humble (Ubuntu 22.04)
+# TensoRT (GPU)): TensorRT (Ubuntu 22.04)
 FROM python:3.10-slim
 
 # 시스템 패키지 & rclpy 설치 (apt)
