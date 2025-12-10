@@ -217,7 +217,6 @@ flowchart LR
 - ### ([v0.2](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_2)): **sEMG-only input + INT8/TensorRT** 
 
 ✓ Requirement: p95 < 30 ms → PASSED  
-✗ Hybrid/SNN models: ONNX/TensorRT export pending, Spikegen encoding problem
 
 - ### ([v0.3](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/ros2_ws)): edge container + dashboard
 - ### v1.0: report + kit release (soon)
