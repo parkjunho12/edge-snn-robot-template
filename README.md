@@ -197,7 +197,7 @@ flowchart LR
   PREPROC[notch/z-score] --> ENC[Spike / Window Encoder]
   ENC --> HYB[Hybrid TCN-SNN Inference]
   HYB --> CTRL[Controller : PID / Policy]
-  CTRL --> ACT[Simulator | Fake Hardware | Robot Actuators]
+  CTRL --> ACT[Simulator , Fake Hardware , Robot Actuators]
 
 
   HYB --> MET[Metrics: latency, spikes, energy]
