@@ -123,11 +123,18 @@ docker build -t edge-snn-robot:dev .
 # Run via compose
 docker compose -f deploy/docker-compose.yml up
 
-# 11) ROS2 bridge (optional)
+# 11) Matlab simulator (Optional)
+# 1. Open MATLAB
+# 2. Navigate into the simulator folder:
+cd matlab_simulator
+# 3. Run the hand simulator:
+run_hand_simulator
+
+# 12) ROS2 bridge (optional)
 # ROS2 is completely optional.
 # If you do not need to connect to a robot or simulator, you can skip this step and use only the FastAPI server.
 
-# 11-a) Native ROS2 (Ubuntu + ROS2 Humble already installed)
+# 12-a) Native ROS2 (Ubuntu + ROS2 Humble already installed)
 source /opt/ros/humble/setup.bash
 cd ros2_ws
 colcon build --symlink-install
@@ -140,7 +147,7 @@ ros2 launch edge_snn_robot robot_control.launch.py \
 # - servo_cmd_node → consumes /emg_intent and publishes /joint_cmd
 # - fake_hardware_node → subscribes to /joint_cmd and simulates the robot hardware
 
-# 11-b) ROS2 inside Docker (when you don’t have ROS2 locally)
+# 12-b) ROS2 inside Docker (when you don’t have ROS2 locally)
 cd ros2_ws
 docker compose -f deploy/docker-compose.yml build --no-cache ros2-robot
 
@@ -167,6 +174,20 @@ ros2 launch edge_snn_robot robot_control.launch.py \
 
 
 ```
+
+## MATLAB Simulator
+### The repository includes a full 3D MATLAB simulator for robotic hand/arm visualization. This allows you to verify:
+- Gesture mappings
+
+- Kinematic correctness
+
+- Wrist + 5-finger motion (17 DOF)
+
+- Servo angle scaling, ranges, and joint indexing
+
+- Real-time playback from ROS2, FastAPI inference, or offline logs
+
+- This is ideal when real hardware is not available, or when validating control logic before deployment.
 
 ## Architecture
 
