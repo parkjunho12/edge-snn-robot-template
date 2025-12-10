@@ -1,0 +1,88 @@
+# Edge SNN Robot - Configuration File
+# 
+# This file contains all configurable parameters for the robot control system.
+# You can load this with: --params-file config/robot_params.yaml
+
+# ========================================
+# EMG Intent Node
+# ========================================
+emg_intent_node:
+  ros__parameters:
+    server_url: "http://localhost:8000"
+    poll_rate_hz: 30.0
+    min_confidence: 0.7
+    encoding_type: "rate"
+    model_prefix: "tcn"
+    device: "cpu"
+
+# ========================================
+# Servo Command Node
+# ========================================
+servo_cmd_node:
+  ros__parameters:
+    min_confidence: 0.7
+    filter_alpha: 0.3        # Smoothing: 0=none, 1=instant
+    enable_safety_limits: true
+    
+    # Joint limits (radians)
+    min_joint_angle: -1.5    # ~-86 degrees
+    max_joint_angle: 1.5     # ~86 degrees
+    
+    # PWM limits (microseconds)
+    min_pwm: 1000
+    max_pwm: 2000
+    center_pwm: 1500
+
+# ========================================
+# Fake Hardware Node
+# ========================================
+fake_hardware_node:
+  ros__parameters:
+    enable_feedback: true
+    feedback_rate_hz: 10.0
+    enable_logging: true
+    verbose: false
+
+# ========================================
+# Gesture Descriptions (for reference)
+# ========================================
+# These are the 7 gestures supported by the system
+gestures:
+  0:
+    name: "Rest"
+    description: "Relaxed neutral position"
+  1:
+    name: "Hand Open"
+    description: "All fingers extended, palm open"
+  2:
+    name: "Hand Close"
+    description: "Fist, power grip"
+  3:
+    name: "Wrist Flex"
+    description: "Wrist bent upward"
+  4:
+    name: "Wrist Extend"
+    description: "Wrist bent downward"
+  5:
+    name: "Pinch"
+    description: "Thumb-index precision grip"
+  6:
+    name: "Point"
+    description: "Index finger extended, others closed"
+
+# ========================================
+# Real Hardware Configuration (future)
+# ========================================
+# Uncomment and configure when deploying to real robot
+# 
+# real_hardware_node:
+#   ros__parameters:
+#     serial_port: "/dev/ttyUSB0"
+#     baud_rate: 115200
+#     i2c_address: 0x40        # PCA9685 default
+#     num_servos: 17
+#     enable_encoders: false
+#     emergency_stop_pin: 18
+#     
+#     # Servo calibration offsets (PWM microseconds)
+#     servo_offsets: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

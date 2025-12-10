@@ -187,3 +187,4 @@ output/rate_prev/*.json
 output/rate_prev/*.plan
 output/rate_prev/*.pth
 output/rate_prev/*.pkl
+ros2_ws/ros2_ws/*

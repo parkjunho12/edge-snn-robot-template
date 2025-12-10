@@ -1,0 +1,30 @@
+FROM osrf/ros:humble-desktop
+
+# 필수 도구 설치
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip python3-colcon-common-extensions \
+    pip install requests \
+    git build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ros2_ws
+
+# 현재 ros2_ws 전체를 컨테이너로 복사
+# (.dockerignore로 .venv, build, install, log 등은 제외 추천)
+COPY . /ros2_ws
+
+COPY src/edge_snn_robot /ros2_ws/src/edge_snn_robot
+
+RUN chmod +x /ros2_ws/ros_entrypoint.sh
+
+# ROS2 환경 잡고 colcon 빌드
+RUN bash -lc "source /opt/ros/humble/setup.bash && \
+    colcon build && \
+    rm -rf /var/lib/apt/lists/*"
+
+# 엔트리포인트 스크립트 복사
+COPY ros_entrypoint.sh /ros_entrypoint.sh
+RUN chmod +x /ros_entrypoint.sh
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["ros2", "launch", "edge_snn_robot", "robot_control.launch.py"]
