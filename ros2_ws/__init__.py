@@ -13,7 +13,6 @@ from .ros2_bridge import ROS2Bridge, get_bridge
 
 # Check if ROS2 is available
 try:
-    import rclpy
     ROS2_AVAILABLE = True
 except ImportError:
     ROS2_AVAILABLE = False
