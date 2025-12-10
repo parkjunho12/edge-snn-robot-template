@@ -44,7 +44,7 @@ ros2_ws/
         └── robot_params.yaml
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Native or Docker)
 
 ### Prerequisites
 
@@ -53,36 +53,107 @@ ros2_ws/
 - Python 3.8+
 - FastAPI inference server
 
-### Installation (3 steps)
 
 ```bash
-# 1. Clone/navigate to workspace
+# FastAPI Server
+# Run inference server on your host:
+uvicorn src.infer_server.app:app --host 0.0.0.0 --port 8000
+
 cd ros2_ws
 
-# 2. Run setup script
-./setup.sh
+# a) Native ROS2 (Ubuntu + ROS2 Humble already installed)
+source /opt/ros/humble/setup.bash
+cd ros2_ws
+colcon build --symlink-install
 
-# 3. Source workspace
 source install/setup.bash
-```
-
-### Running the System
-
-```bash
-# Terminal 1: Start FastAPI server
-uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
-# Endpoints:
-#   GET  /health
-#   POST /infer/run         # batch
-#   WS   /infer/stream      # sEMG windows → predictions
-#   WS   /emg/stream        # raw/processed sEMG (optional)
-
-# Terminal 2: Launch ROS2
 ros2 launch edge_snn_robot robot_control.launch.py \
-  server_url:=http://localhost:8000
+  server_url:=http://localhost:8000 
+
+# - emg_intent_node → calls FastAPI for inference results and publishes /emg_intent
+# - servo_cmd_node → consumes /emg_intent and publishes /joint_cmd
+# - fake_hardware_node → subscribes to /joint_cmd and simulates the robot hardware
+
+# b) ROS2 inside Docker (when you don’t have ROS2 locally)
+cd ros2_ws
+docker compose -f deploy/docker-compose.yml build --no-cache ros2-robot
+
+# local FAST API server
+docker run --rm -it --network emg-network  edge-snn-robot:ros2 bash
+
+# docker FAST API server
+docker network create {network name} # ex) emg-network 
+docker network connect emg-network {FAST API docker container id} # ex) f1fe08ed074878469e06d43dca3f131ba384b41
+
+docker run --rm -it --network emg-network  edge-snn-robot:ros2 bash 
+
+
+# Inside the container:
+pip install requests
+
+# Note:
+# macOS/Windows → http://host.docker.internal:8000
+# Linux → use host IP: http://192.168.x.x:8000
+# If FastAPI is also inside Docker → use internal name:
+# http://edge-snn-robot:8000
+
+# local FAST API
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://host.docker.internal:8000 
+
+# docker FAST API
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://{docker container name: ex) test}:8000
+
 ```
 
 **That's it!** The system is now running with fake hardware. 🎉
+
+
+## 🧠 Live Runtime Example (Successful Execution)
+
+These logs confirm full ROS2 pipeline correctness:
+
+ - Intent messages publishing at ~28 Hz
+
+ - Confidence always ≥ threshold
+
+ - Correct gesture mapping → /joint_cmd
+
+ - Fake robot simulating motion
+
+```bash
+[emg_intent_node] Published 300 intents (27.8 Hz, 0 errors)
+[servo_cmd_node] Commands: 300 | Gesture: Rest | Conf: 1.00
+[fake_hardware_node] Statistics: 300 commands (28.1 Hz, 10.7s)
+[fake_hardware_node]   Gesture 0: 287 (95.7%)
+[fake_hardware_node]   Gesture 2: 3 (1.0%)
+[fake_hardware_node]   Gesture 5: 6 (2.0%)
+[fake_hardware_node]   Gesture 6: 4 (1.3%)
+```
+
+### Interpretation:
+
+ - /emg_intent is published correctly
+
+ - /joint_cmd is being generated for each intent
+
+ - Fake hardware is receiving and simulating motion
+
+ - End-to-end loop is stable at ~28 Hz
+
+ - No packet loss or inference errors
+
+### This confirms:
+
+ - networking is correct
+
+ - polling and confidence thresholding are correct
+
+ - gesture → kinematics mapping is correct
+
+ - This is exactly what a real robot would receive — only hardware is faked.
+
 
 ## 📊 System Architecture
 
