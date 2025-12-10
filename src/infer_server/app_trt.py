@@ -68,15 +68,6 @@ try:
     trt_runtime.warmup(
         input_shape=(batch_size, window_size, num_channels), num_iterations=10
     )
-    hybrid_trt_runtime.warmup(
-        input_shape=(batch_size, window_size, num_channels), num_iterations=10
-    )
-    snn_trt_runtime.warmup(
-        input_shape=(batch_size, window_size, num_channels), num_iterations=10
-    )
-    spiking_tcn_trt_runtime.warmup(
-        input_shape=(batch_size, window_size, num_channels), num_iterations=10
-    )
     
     print("✓ TensorRT runtime loaded successfully")
 except Exception as e:
