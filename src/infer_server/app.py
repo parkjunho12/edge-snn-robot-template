@@ -66,6 +66,7 @@ current_emg_mode: EMGMode = settings.emg_mode
 ninapro_cfg = build_ninapro_cfg(settings)
 ninapro_emg_stream = get_emg_stream(EMGMode.NINAPRO, ninapro_cfg=ninapro_cfg)
 
+trt_runtime = None
 
 def build_emg_stream(mode: EMGMode, settings: Settings) -> EMGStream:
     if settings.emg_mode == EMGMode.NINAPRO:
@@ -134,7 +135,7 @@ def health() -> dict[str, str]:
     """Health check endpoint"""
     return {
         "status": "ok",
-        "tensorrt_available": trt_runtime is not None,
+        "tensorrt_available": "yes" if trt_runtime else "no",
         "emg_mode": settings.emg_mode.value,
     }
 
