@@ -56,11 +56,19 @@ num_channels = int(meta["num_channels"])
 batch_size = 1
 
 trt_runtime: Optional[TRTRuntime] = None
+hybrid_trt_runtime: Optional[TRTRuntime] = None
+snn_trt_runtime: Optional[TRTRuntime] = None
+spiking_tcn_trt_runtime: Optional[TRTRuntime] = None
 try:
     trt_runtime = TRTRuntime("output/rate/model_tcn_fp16.plan")
+    hybrid_trt_runtime = TRTRuntime("output/rate/model_hybrid_int8.plan")
+    snn_trt_runtime = TRTRuntime("output/rate/model_snn_int8.plan")
+    spiking_tcn_trt_runtime = TRTRuntime("output/rate/model_spiking_tcn_int8.plan")
+    
     trt_runtime.warmup(
         input_shape=(batch_size, window_size, num_channels), num_iterations=10
     )
+    
     print("✓ TensorRT runtime loaded successfully")
 except Exception as e:
     print(f"⚠ TensorRT runtime not available: {e}")
@@ -178,18 +186,22 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
         cur_model = model
         cur_scaler = scaler
         cur_meta = meta
+        cur_trt_runtime = trt_runtime
     elif config.model_type == "SNN":
         cur_model = snn_model
         cur_scaler = snn_scaler
         cur_meta = snn_meta
+        cur_trt_runtime = snn_trt_runtime
     elif config.model_type == "Hybrid":
         cur_model = hybrid_model
         cur_scaler = hybrid_scaler
         cur_meta = hybrid_meta
+        cur_trt_runtime = hybrid_trt_runtime
     elif config.model_type == "SpikingTCN":
         cur_model = spiking_tcn_model
         cur_scaler = spiking_tcn_scaler
         cur_meta = spiking_tcn_meta
+        cur_trt_runtime = spiking_tcn_trt_runtime
 
     try:
         # 🔹 EMG 스트림을 비동기 반복
@@ -231,7 +243,7 @@ async def emg_stream_generator(config: StreamConfig) -> AsyncGenerator[str, None
                 # TensorRT inference
                 # Add batch dimension: [1, sequence_length, channels]
                 x_np = emg_tensor.detach().cpu().numpy().astype(np.float32)
-                output = trt_runtime.infer(x_np)
+                output = cur_trt_runtime.infer(x_np)
 
                 # Get prediction
                 probs = np.exp(output) / np.sum(np.exp(output), axis=-1, keepdims=True)

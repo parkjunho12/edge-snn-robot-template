@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
+import pycuda.autoinit
 from pathlib import Path
 from typing import Optional, Tuple
 import logging

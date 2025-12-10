@@ -1,0 +1,14 @@
+services:
+  ros2-robot:
+    build:
+      context: ..
+      dockerfile: Dockerfile.ros2
+    image: edge-snn-robot:ros2
+    restart: on-failure:3
+    environment:
+      # ROS namespace/domain
+      - ROS_DOMAIN_ID=0
+      # FastAPI server is on host machine
+      - SERVER_URL=http://host.docker.internal:8000
+    container_name: ros2_robot
+    

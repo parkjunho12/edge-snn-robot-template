@@ -6,78 +6,72 @@ import snntorch as snn
 from snntorch import surrogate
 import snntorch.spikegen as spikegen
 
-
 class SpikeEncoder(nn.Module):
     """연속 신호를 스파이크로 변환하는 인코더"""
 
     def __init__(
         self,
+        mode='export',
         encoding_type="latency",
         num_steps=10,
         latency_linear=False,
         latency_threshold=0.75,
         per_channel_norm=True,
+        thresh=0.5,
     ):
         super(SpikeEncoder, self).__init__()
+        self.mode = mode
         self.encoding_type = encoding_type
         self.num_steps = num_steps
         self.latency_linear = latency_linear
         self.latency_threshold = latency_threshold
         self.per_channel_norm = per_channel_norm
+        self.thresh = thresh
 
     def forward(self, x):
         # x shape: (batch_size, seq_len, features)
         batch_size, seq_len, features = x.shape
-        if self.encoding_type == "delta":
-            spikes = spikegen.delta(x, threshold=0.2)  # (B, T_seq, C)
+        if self.mode == 'train':
+            if self.encoding_type == 'delta':
+                # 1) (B,T,C) 그대로 delta에 투입
+                #    snntorch.spikegen.delta는 (B,T,C) -> (B,T,C) 형태 반환(버전에 따라 다를 수 있으니 아래 체크 권장)
+                spikes = spikegen.delta(x, threshold=0.1)   # (B,T,C)
 
-            # (B, T_seq, C) -> (1, B, T_seq, C)
-            spikes = spikes.unsqueeze(0)
+                # 2) 시간 차원 첫 번째로: (T,B,C)
+                spikes = spikes.transpose(0, 1).contiguous()
 
-            # T_sim만큼 복제: (T_sim, B, T_seq, C)
-            spikes = spikes.repeat(self.num_steps, 1, 1, 1)
+                return spikes  # (T, B, C)
+            if self.encoding_type == 'rate':
+                # Rate encoding: 입력 크기에 비례하는 스파이크 확률
+                # 입력을 0-1 범위로 정규화
+                p = torch.sigmoid(x)  # (B,T,C)
+                                                
+                spikes = spikegen.rate(p, num_steps=self.num_steps)   # (num_steps, B, T, C)
+                
+                return spikes
+            
+            elif self.encoding_type == 'latency':
+                # Latency encoding
+                spikes = spikegen.latency(x, num_steps=seq_len, normalize=True, linear=True)
+                return spikes
+            
+            else:  # 'delta'
+                # Delta modulation
+                spikes = spikegen.delta(x, threshold=0.1)   # (B,T,C)
 
-            return spikes
-        if self.encoding_type == "rate":
-            # Rate encoding: 입력 크기에 비례하는 스파이크 확률
-            # 입력을 0-1 범위로 정규화
-            p = torch.sigmoid(x)  # (B,T,C)
-
-            spikes = spikegen.rate(p, num_steps=self.num_steps)  # (num_steps, B, T, C)
-            return spikes
-
-        elif self.encoding_type == "latency":
-            # Latency encoding
-            if self.latency_threshold > 0:
-                x = torch.where(x < self.latency_threshold, torch.zeros_like(x), x)
-
-            # --- Normalization ---
-            if self.per_channel_norm:
-                # 채널별 min-max 정규화
-                x_min = x.min(dim=1, keepdim=True)[0]  # (B,1,C)
-                x_max = x.max(dim=1, keepdim=True)[0]  # (B,1,C)
-                batch_norm = (x - x_min) / (x_max - x_min + 1e-8)
-            else:
-                # 배치 전체 min-max
-                batch_norm = (x - x.min()) / (x.max() - x.min() + 1e-8)
-
-            # --- Latency Encoding ---
-            spikes = spikegen.latency(
-                batch_norm,
-                num_steps=self.num_steps,
-                normalize=True,
-                linear=self.latency_linear,
-            )
-            return spikes  # (num_steps, B, T, C)
-
-        else:  # 'delta'
-            # Delta modulation
-            spikes = spikegen.delta(x, threshold=0.1)  # (B,T,C)
-
-            # 2) 시간 차원 첫 번째로: (T,B,C)
-            spikes = spikes.transpose(0, 1).contiguous()
-
+                # 2) 시간 차원 첫 번째로: (T,B,C)
+                spikes = spikes.transpose(0, 1).contiguous()
+                
             return spikes  # (T, B, C)
+        else:
+            p = torch.sigmoid(x)
+            x = (p > self.thresh).to(x.dtype)
+            spikes = x.unsqueeze(0).repeat(self.num_steps, 1, 1, 1)
+
+            return spikes
+        
+    def set_export(self):
+        self.mode = "export"
 
 
 class SNNBlock(nn.Module):

@@ -179,3 +179,12 @@ output/delta/*.json
 output/latency/*.plan
 output/rate/*.plan
 output/delta/*.plan
+output/*.json
+output/*.csv
+output/*.png
+output/rate_prev/*.png
+output/rate_prev/*.json
+output/rate_prev/*.plan
+output/rate_prev/*.pth
+output/rate_prev/*.pkl
+ros2_ws/ros2_ws/*

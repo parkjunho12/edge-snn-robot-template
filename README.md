@@ -90,11 +90,11 @@ python scripts/download_data.py --mat s1.mat
 python scripts/download_data.py --mat s2.mat
 python scripts/download_data.py --mat s3.mat
 
-# 4) Download artifacts
+# 4) Download artifacts (trained weights, configs, etc.)
 python scripts/download_data.py --artifacts
 
 cd v0_1
-# v0_1 README.md read
+# v0_1 README.md for details
 
 cd ..
 
@@ -104,11 +104,9 @@ cd ..
 # 8) Validate onnx (Optional)
 
 cd v0_2
-# v0_2 README.md read
+# v0_2 README.md for EMG-only + TensorRT pipeline
 
 cd ..
-
-# 9) 
 
 # 9) Run inference server (FastAPI)
 uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
@@ -118,16 +116,78 @@ uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
 #   WS   /infer/stream      # sEMG windows → predictions
 #   WS   /emg/stream        # raw/processed sEMG (optional)
 
-# 10) ROS2 (optional)
+# 10) Docker build (FAST API)
+# Build image
+docker build -t edge-snn-robot:dev .
+
+# Run via compose
+docker compose -f deploy/docker-compose.yml up
+
+# 11) Matlab simulator (Optional)
+# 1. Open MATLAB
+# 2. Navigate into the simulator folder:
+cd matlab_simulator
+# 3. Run the hand simulator:
+run_hand_simulator
+
+# 12) ROS2 bridge (optional)
+# ROS2 is completely optional.
+# If you do not need to connect to a robot or simulator, you can skip this step and use only the FastAPI server.
+
+# 12-a) Native ROS2 (Ubuntu + ROS2 Humble already installed)
 source /opt/ros/humble/setup.bash
 cd ros2_ws
 colcon build --symlink-install
 
+source install/setup.bash
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://localhost:8000 
 
-# 11) Docker build (edge)
-docker build -t edge-snn-robot:dev .
-docker compose -f deploy/docker-compose.yml up
+# - emg_intent_node → calls FastAPI for inference results and publishes /emg_intent
+# - servo_cmd_node → consumes /emg_intent and publishes /joint_cmd
+# - fake_hardware_node → subscribes to /joint_cmd and simulates the robot hardware
+
+# 12-b) ROS2 inside Docker (when you don’t have ROS2 locally)
+cd ros2_ws
+docker compose -f deploy/docker-compose.yml build --no-cache ros2-robot
+
+# local FAST API server
+docker run --rm -it --network emg-network  edge-snn-robot:ros2 bash
+
+# docker FAST API server
+docker network create {network name} # ex) emg-network 
+docker network connect emg-network {FAST API docker container id} # ex) f1fe08ed074878469e06d43dca3f131ba384b41
+
+docker run --rm -it --network emg-network  edge-snn-robot:ros2 bash 
+
+
+# Inside the container:
+pip install requests
+
+# local FAST API
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://host.docker.internal:8000 
+
+# docker FAST API
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://{docker container name: ex) test}:8000
+
+
 ```
+
+## MATLAB Simulator
+### The repository includes a full 3D MATLAB simulator for robotic hand/arm visualization. This allows you to verify:
+- Gesture mappings
+
+- Kinematic correctness
+
+- Wrist + 5-finger motion (17 DOF)
+
+- Servo angle scaling, ranges, and joint indexing
+
+- Real-time playback from ROS2, FastAPI inference, or offline logs
+
+- This is ideal when real hardware is not available, or when validating control logic before deployment.
 
 ## Architecture
 
@@ -137,7 +197,7 @@ flowchart LR
   PREPROC[notch/z-score] --> ENC[Spike / Window Encoder]
   ENC --> HYB[Hybrid TCN-SNN Inference]
   HYB --> CTRL[Controller : PID / Policy]
-  CTRL --> ACT[Robot Actuators]
+  CTRL --> ACT[Simulator | Fake Hardware | Robot Actuators]
 
 
   HYB --> MET[Metrics: latency, spikes, energy]
@@ -154,15 +214,12 @@ flowchart LR
 
 - ### ([v0.1](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_1)): minimal SNN control loop + metrics ([tag](https://github.com/parkjunho12/edge-snn-robot-template/releases/tag/v0.1.16))
 
-
-- ### ([v0.2](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_2)): **sEMG-only input + INT8/TensorRT**   (working)
+- ### ([v0.2](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/v0_2)): **sEMG-only input + INT8/TensorRT** 
 
 ✓ Requirement: p95 < 30 ms → PASSED  
 ✗ Hybrid/SNN models: ONNX/TensorRT export pending, Spikegen encoding problem
 
-- ### v0.3: edge container + dashboard (soon)
-- ### v0.4: Hybrid TCN–SNN ablation/results (soon)
-- ### v0.5: robustness + fail-safe (soon)
+- ### ([v0.3](https://github.com/parkjunho12/edge-snn-robot-template/tree/main/ros2_ws)): edge container + dashboard
 - ### v1.0: report + kit release (soon)
 
 
