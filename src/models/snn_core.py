@@ -6,16 +6,28 @@ import snntorch as snn
 from snntorch import surrogate
 import snntorch.spikegen as spikegen
 
-
 class SpikeEncoder(nn.Module):
     """연속 신호를 스파이크로 변환하는 인코더"""
-    def __init__(self, mode='export', encoding_type='rate', num_steps=10, thresh=0.5):
+
+    def __init__(
+        self,
+        mode='export',
+        encoding_type="latency",
+        num_steps=10,
+        latency_linear=False,
+        latency_threshold=0.75,
+        per_channel_norm=True,
+        thresh=0.5,
+    ):
         super(SpikeEncoder, self).__init__()
         self.mode = mode
         self.encoding_type = encoding_type
         self.num_steps = num_steps
+        self.latency_linear = latency_linear
+        self.latency_threshold = latency_threshold
+        self.per_channel_norm = per_channel_norm
         self.thresh = thresh
-        
+
     def forward(self, x):
         # x shape: (batch_size, seq_len, features)
         batch_size, seq_len, features = x.shape
@@ -57,6 +69,7 @@ class SpikeEncoder(nn.Module):
             spikes = x.unsqueeze(0).repeat(self.num_steps, 1, 1, 1)
 
             return spikes
+        
     def set_export(self):
         self.mode = "export"
 

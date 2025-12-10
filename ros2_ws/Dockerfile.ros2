@@ -3,7 +3,6 @@ FROM osrf/ros:humble-desktop
 # 필수 도구 설치
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip python3-colcon-common-extensions \
-    pip install requests \
     git build-essential \
     && rm -rf /var/lib/apt/lists/*
 

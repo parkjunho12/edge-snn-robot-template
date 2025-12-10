@@ -70,11 +70,16 @@ source install/setup.bash
 
 ```bash
 # Terminal 1: Start FastAPI server
-cd /path/to/project
-./start_server.sh
+uvicorn src.infer_server.app:app --reload --host 0.0.0.0 --port 8000
+# Endpoints:
+#   GET  /health
+#   POST /infer/run         # batch
+#   WS   /infer/stream      # sEMG windows → predictions
+#   WS   /emg/stream        # raw/processed sEMG (optional)
 
 # Terminal 2: Launch ROS2
-ros2 launch edge_snn_robot robot_control.launch.py
+ros2 launch edge_snn_robot robot_control.launch.py \
+  server_url:=http://localhost:8000
 ```
 
 **That's it!** The system is now running with fake hardware. 🎉
@@ -326,5 +331,3 @@ MIT License - See LICENSE file
 
 **Current Status:** ✅ Development Ready (Fake Hardware)  
 **Next Step:** 🔧 Implement Real Hardware Driver
-
-**Questions?** Check the Korean guide: `ROS2_GUIDE_KR.md`

@@ -46,10 +46,6 @@ Complete implementation of a high-performance EMG inference server with TensorRT
 
 ### 0. Version Compatibility
 
-✅ **TensorRT 8.x, 9.x, and 10.x fully supported!**
-
-Your version (10.9.0.34) will work automatically with our version-aware runtime. See [TENSORRT_VERSION_GUIDE.md](TENSORRT_VERSION_GUIDE.md) for details.
-
 ### 1. Installation
 
 ```bash
@@ -107,8 +103,6 @@ Open `examples/dashboard.html` in your web browser for a beautiful real-time vis
 | POST | `/infer/stream` | **Streaming inference (SSE)** |
 | GET | `/infer/stream/stats` | Stream statistics |
 | POST | `/benchmark` | Performance benchmark |
-
-See [STREAMING_API.md](src/infer_server/STREAMING_API.md) for detailed API documentation.
 
 ## 🐍 Python Client Examples
 
